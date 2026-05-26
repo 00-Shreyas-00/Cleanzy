@@ -1,0 +1,12 @@
+# Ignore agent scratchpad and terminal dump files
+context/dump/*
+!context/dump/.gitkeep
+
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables
+.env

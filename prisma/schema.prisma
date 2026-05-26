@@ -1,0 +1,113 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  user_id       String        @id @default(uuid()) @db.Uuid
+  name          String
+  email         String        @unique
+  phone         String
+  role          String        // e.g., "User", "Worker", "Administrator"
+  password_hash String
+  address       String
+  staff         Staff?
+  bookings      Booking[]     @relation("UserBookings")
+  notifications Notification[]
+  feedback      Feedback[]
+
+  @@map("user")
+}
+
+model Staff {
+  staff_id        String       @id @default(uuid()) @db.Uuid
+  user_id         String       @unique @db.Uuid
+  user            User         @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  skill_type      String
+  rating          Float        @default(5.0)
+  availability    Boolean      @default(true)
+  location_coords String
+  bookings        Booking[]
+  attendance      Attendance[]
+
+  @@map("staff")
+}
+
+model Service {
+  service_id    String    @id @default(uuid()) @db.Uuid
+  service_name  String
+  description   String
+  base_price    Float
+  duration_mins Int
+  bookings      Booking[]
+
+  @@map("service")
+}
+
+model Booking {
+  booking_id     String     @id @default(uuid()) @db.Uuid
+  client_id      String     @db.Uuid
+  client         User       @relation("UserBookings", fields: [client_id], references: [user_id], onDelete: Cascade)
+  staff_id       String     @db.Uuid
+  staff          Staff      @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+  service_id     String     @db.Uuid
+  service        Service    @relation(fields: [service_id], references: [service_id], onDelete: Cascade)
+  scheduled_time DateTime
+  status         String     @default("Pending")
+  location       String
+  payment        Payment?
+  feedback       Feedback?
+
+  @@map("booking")
+}
+
+model Payment {
+  payment_id         String   @id @default(uuid()) @db.Uuid
+  booking_id         String   @unique @db.Uuid
+  booking            Booking  @relation(fields: [booking_id], references: [booking_id], onDelete: Cascade)
+  amount             Float
+  mode               String
+  transaction_status String
+  timestamp          DateTime @default(now())
+
+  @@map("payment")
+}
+
+model Attendance {
+  attendance_id String    @id @default(uuid()) @db.Uuid
+  staff_id      String    @db.Uuid
+  staff         Staff     @relation(fields: [staff_id], references: [staff_id], onDelete: Cascade)
+  date          DateTime  @db.Date
+  check_in      DateTime
+  check_out     DateTime?
+
+  @@map("attendance")
+}
+
+model Feedback {
+  feedback_id String  @id @default(uuid()) @db.Uuid
+  booking_id  String  @unique @db.Uuid
+  booking     Booking @relation(fields: [booking_id], references: [booking_id], onDelete: Cascade)
+  client_id   String  @db.Uuid
+  client      User    @relation(fields: [client_id], references: [user_id], onDelete: Cascade)
+  rating      Int
+  comments    String
+
+  @@map("feedback")
+}
+
+model Notification {
+  notification_id String   @id @default(uuid()) @db.Uuid
+  user_id         String   @db.Uuid
+  user            User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  type            String
+  message         String
+  sent_at         DateTime @default(now())
+  is_read         Boolean  @default(false)
+
+  @@map("notification")
+}

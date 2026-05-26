@@ -1,0 +1,47 @@
+SEQUENCE DIAGRAM TEXTUAL REPRESENTATION
+
+Participants (Lifelines)
+
+    : User
+
+    : App
+
+    : Backend
+
+    : Database
+
+    : 3rd Party Payment Gateway
+
+Messages and Interactions (In Chronological Order)
+
+Phase A: Requesting and Presenting Service Options
+
+    1a. Request for a service -> (From : User to : App)
+
+    2a. Initiate booking -> (From : App to : Backend)
+
+    3a. Fetch Staff list -> (From : Backend to : Database)
+
+    4a. Provide List of available staff -> (Return dash-line from : Database to : Backend)
+
+    5a. Return booking options -> (Return dash-line from : Backend to : App)
+
+    6a. Service options -> (Return dash-line from : App to : User)
+
+Phase B: Booking and Payment Processing
+
+    1b. Book a service -> (From : User to : App)
+
+    2b. Confirm and assign service -> (From : App to : Backend)
+
+    3b. Initiate payment -> (From : Backend to : 3rd Party Payment Gateway)
+
+    4b. Request Payment -> (From : 3rd Party Payment Gateway to : User)
+
+    5b. Confirm Payment -> (Return dash-line from : User to : 3rd Party Payment Gateway)
+
+    6b. Authorize Transaction -> (Return dash-line from : 3rd Party Payment Gateway to : Backend)
+
+    7b. Display confirmation -> (Return dash-line from : Backend to : App)
+
+    8b. Confirmation of booking -> (Return dash-line from : App to : User)

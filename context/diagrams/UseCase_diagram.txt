@@ -1,0 +1,43 @@
+USE CASE DIAGRAM TEXTUAL REPRESENTATION
+
+System Boundary: Online Housekeeping management platform
+
+Actors:
+
+    - User
+
+    - Worker
+
+    - Administrator
+
+Associations (Actor -> Use Cases)
+
+User connects to:
+
+    - Book required service
+
+    - Receive service from worker
+
+    - Search for required service
+
+    - View worker profile
+
+    - Sign Up / Log in
+
+Worker connects to:
+
+    - Sign Up / Log in
+
+    - Confirm Booking
+
+    - View Bookings
+
+Administrator connects to:
+
+    - View Bookings
+
+    - Manage worker complaints
+
+    - View performance reviews
+
+    - Manage staff holidays and salary

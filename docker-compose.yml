@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: cleanzy-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cleanzy
+    ports:
+      - "5445:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cleanzy"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cleanzy-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/cleanzy?schema=public"
+      PORT: 3000
+      JWT_SECRET: "super-secret-key-change-in-production"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

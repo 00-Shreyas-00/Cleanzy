@@ -1,0 +1,133 @@
+ENTITY-RELATIONSHIP (ER) DIAGRAM TEXTUAL REPRESENTATION
+
+Entities and Attributes
+
+USER
+
+    uuid | User_ID (PK)
+
+    string | Name
+
+    string | Email
+
+    string | Phone
+
+    string | Role
+
+    string | Password_Hash
+
+    string | Address
+
+STAFF
+
+    uuid | Staff_ID (PK)
+
+    uuid | User_ID (FK)
+
+    string | Skill_Type
+
+    float | Rating
+
+    bool | Availability
+
+    string | Location_Coords
+
+SERVICE
+
+    uuid | Service_ID (PK)
+
+    string | Service_Name
+
+    string | Description
+
+    float | Base_Price
+
+    int | Duration_Mins
+
+BOOKING
+
+    uuid | Booking_ID (PK)
+
+    uuid | Client_ID (FK) (Points to User)
+
+    uuid | Staff_ID (FK)
+
+    uuid | Service_ID (FK)
+
+    datetime | Scheduled_Time
+
+    string | Status
+
+    string | Location
+
+PAYMENT
+
+    uuid | Payment_ID (PK)
+
+    uuid | Booking_ID (FK)
+
+    float | Amount
+
+    string | Mode
+
+    string | Transaction_Status
+
+    datetime | Timestamp
+
+ATTENDANCE
+
+    uuid | Attendance_ID (PK)
+
+    uuid | Staff_ID (FK)
+
+    date | Date
+
+    datetime | Check_In
+
+    datetime | Check_Out
+
+FEEDBACK
+
+    uuid | Feedback_ID (PK)
+
+    uuid | Booking_ID (FK)
+
+    uuid | Client_ID (FK) (Points to User)
+
+    int | Rating
+
+    string | Comments
+
+NOTIFICATION
+
+    uuid | Notification_ID (PK)
+
+    uuid | User_ID (FK)
+
+    string | Type
+
+    string | Message
+
+    datetime | Sent_At
+
+    bool | Is_Read
+
+Relationships and Cardinalities
+
+    USER -> STAFF: One-to-One / One-to-Zero-or-One (registered as)
+
+    USER -> BOOKING: One-to-Many (places)
+
+    USER -> NOTIFICATION: One-to-Many (receives)
+
+    USER -> FEEDBACK: One-to-Many (submits)
+
+    STAFF -> ATTENDANCE: One-to-Many (logs)
+
+    STAFF -> BOOKING: One-to-Many (assigned to)
+
+    SERVICE -> BOOKING: One-to-Many (defines)
+
+    BOOKING -> PAYMENT: One-to-One (generates)
+
+    BOOKING -> FEEDBACK: One-to-One / One-to-Many (receives)
