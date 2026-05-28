@@ -1,0 +1,897 @@
+openapi: 3.0.3
+info:
+  title: Cleanzy Backend API
+  version: 1.0.0
+  description: >
+    API specification for the Cleanzy Online Housekeeping Management Platform.
+    The backend owns all persistence, role authorization, booking state changes,
+    and payment confirmation transitions.
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Profiles
+  - name: Discovery
+  - name: Booking and Payment
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Check server health
+      responses:
+        "200":
+          description: Server is running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                success: true
+                status: UP
+
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a user or administrator
+      description: Worker registrations must use `/api/auth/register-worker`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              name: John Doe
+              email: john@example.com
+              phone: "9876543210"
+              password: SecurePass123!
+              address: 456 Client Lane
+              role: User
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Missing fields or duplicate email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/register-worker:
+    post:
+      tags: [Authentication]
+      summary: Register a worker and staff profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterWorkerRequest"
+            example:
+              name: Jane Smith
+              email: jane@example.com
+              phone: "5551234567"
+              password: WorkerPass123!
+              address: 789 Worker Blvd
+              skill_type: Deep Cleaning
+              location_coords: "12.9716,77.5946"
+      responses:
+        "201":
+          description: Worker and staff profile registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterWorkerResponse"
+        "400":
+          description: Missing fields or duplicate email
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login and receive JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              email: john@example.com
+              password: SecurePass123!
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          description: Missing credentials or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/profiles/me:
+    get:
+      tags: [Profiles]
+      summary: Get own profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profile returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      tags: [Profiles]
+      summary: Update own profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+            example:
+              name: Updated Name
+              phone: "9998887777"
+              address: 999 New Address
+              skill_type: Standard Cleaning
+              availability: false
+              location_coords: "12.9716,77.5946"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileUpdateResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/discovery/search:
+    post:
+      tags: [Discovery]
+      summary: Generate service booking choices
+      description: Requires `User` role.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoverySearchRequest"
+            example:
+              service_id: 14b4fb12-c31b-4976-b29f-e0672d7be442
+              scheduled_time: "2031-02-20T09:30:00.000Z"
+              location: Client Address
+              client_location_coords: "12.9720,77.5950"
+      responses:
+        "200":
+          description: Booking choices generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverySearchResponse"
+        "400":
+          description: Missing fields or invalid datetime
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Service not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/bookings/commit:
+    post:
+      tags: [Booking and Payment]
+      summary: Commit a booking and create payment intent
+      description: Requires `User` role. Creates `Payment_Required` booking only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCommitRequest"
+            example:
+              service_id: 14b4fb12-c31b-4976-b29f-e0672d7be442
+              staff_id: 5d0c49e7-bd9d-4bd5-9099-d0086a5b8a97
+              scheduled_time: "2031-02-20T09:30:00.000Z"
+              location: Client Address
+      responses:
+        "201":
+          description: Booking created and payment intent generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingCommitResponse"
+        "400":
+          description: Missing fields or invalid datetime
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Service or staff not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Staff unavailable, mismatched, or already booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/payments/webhook:
+    post:
+      tags: [Booking and Payment]
+      summary: Handle signed payment authorization callback
+      parameters:
+        - name: x-cleanzy-signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Hex HMAC SHA-256 signature for the request body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentWebhookRequest"
+            example:
+              event_type: payment_intent.succeeded
+              booking_id: 2205216f-cdf6-42d8-86f3-bd8fdfc89974
+              payment_intent_id: pi_authorized_123
+              amount: 145.75
+              mode: Card
+              transaction_status: Authorized
+      responses:
+        "200":
+          description: Payment recorded and booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentWebhookResponse"
+        "400":
+          description: Invalid or unsupported payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid payment gateway signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Booking cannot be confirmed or payment already recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/bookings/cleanup-pending:
+    post:
+      tags: [Booking and Payment]
+      summary: Cancel stale pending bookings
+      description: Requires `Administrator` role.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CleanupPendingRequest"
+            example:
+              older_than_minutes: 30
+      responses:
+        "200":
+          description: Stale bookings cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CleanupPendingResponse"
+        "400":
+          description: Invalid threshold
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [success, error]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Missing required fields
+
+    HealthResponse:
+      type: object
+      required: [success, status]
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: UP
+
+    UserPublic:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [User, Worker, Administrator]
+        address:
+          type: string
+
+    Staff:
+      type: object
+      properties:
+        staff_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        skill_type:
+          type: string
+        rating:
+          type: number
+          format: float
+        availability:
+          type: boolean
+        location_coords:
+          type: string
+          example: "12.9716,77.5946"
+
+    Service:
+      type: object
+      properties:
+        service_id:
+          type: string
+          format: uuid
+        service_name:
+          type: string
+        description:
+          type: string
+        base_price:
+          type: number
+          format: float
+        duration_mins:
+          type: integer
+
+    Booking:
+      type: object
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        staff_id:
+          type: string
+          format: uuid
+        service_id:
+          type: string
+          format: uuid
+        scheduled_time:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Pending, Payment_Required, Confirmed, Cancelled]
+        location:
+          type: string
+
+    Payment:
+      type: object
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: float
+        mode:
+          type: string
+          example: Card
+        transaction_status:
+          type: string
+          example: Authorized
+        timestamp:
+          type: string
+          format: date-time
+
+    PaymentIntent:
+      type: object
+      properties:
+        payment_intent_id:
+          type: string
+          example: pi_2a386d4c-44b3-44f8-96b8-c54e10a52288
+        checkout_url:
+          type: string
+          format: uri
+        amount:
+          type: number
+          format: float
+        currency:
+          type: string
+          example: INR
+        status:
+          type: string
+          enum: [requires_payment_method]
+
+    RegisterRequest:
+      type: object
+      required: [name, email, phone, password, address]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+          format: password
+        address:
+          type: string
+        role:
+          type: string
+          enum: [User, Administrator, Worker]
+          default: User
+
+    RegisterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+
+    RegisterWorkerRequest:
+      type: object
+      required: [name, email, phone, password, address, skill_type, location_coords]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+          format: password
+        address:
+          type: string
+        skill_type:
+          type: string
+        location_coords:
+          type: string
+
+    RegisterWorkerResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            staff_id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+              enum: [Worker]
+            skill_type:
+              type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        token:
+          type: string
+        data:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            role:
+              type: string
+
+    ProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          allOf:
+            - $ref: "#/components/schemas/UserPublic"
+            - type: object
+              properties:
+                staff:
+                  nullable: true
+                  allOf:
+                    - $ref: "#/components/schemas/Staff"
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        skill_type:
+          type: string
+        availability:
+          type: boolean
+        location_coords:
+          type: string
+
+    ProfileUpdateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          allOf:
+            - $ref: "#/components/schemas/UserPublic"
+            - type: object
+              properties:
+                staff:
+                  nullable: true
+                  allOf:
+                    - $ref: "#/components/schemas/Staff"
+
+    DiscoverySearchRequest:
+      type: object
+      required: [service_id, scheduled_time, location]
+      properties:
+        service_id:
+          type: string
+          format: uuid
+        scheduled_time:
+          type: string
+          format: date-time
+        location:
+          type: string
+        client_location_coords:
+          type: string
+
+    DiscoveryChoice:
+      type: object
+      properties:
+        staff_id:
+          type: string
+          format: uuid
+        worker:
+          type: object
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+            rating:
+              type: number
+            skill_type:
+              type: string
+            availability:
+              type: boolean
+            location_coords:
+              type: string
+        service:
+          $ref: "#/components/schemas/Service"
+        schedule:
+          type: object
+          properties:
+            scheduled_time:
+              type: string
+              format: date-time
+            duration_mins:
+              type: integer
+        location:
+          type: string
+        estimated_price:
+          type: number
+        distance_km:
+          type: number
+          nullable: true
+
+    DiscoverySearchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            service:
+              $ref: "#/components/schemas/Service"
+            requested_schedule:
+              type: string
+              format: date-time
+            requested_location:
+              type: string
+            choice_count:
+              type: integer
+            choices:
+              type: array
+              items:
+                $ref: "#/components/schemas/DiscoveryChoice"
+
+    BookingCommitRequest:
+      type: object
+      required: [service_id, staff_id, scheduled_time, location]
+      properties:
+        service_id:
+          type: string
+          format: uuid
+        staff_id:
+          type: string
+          format: uuid
+        scheduled_time:
+          type: string
+          format: date-time
+        location:
+          type: string
+
+    BookingCommitResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            booking:
+              $ref: "#/components/schemas/Booking"
+            payment_intent:
+              $ref: "#/components/schemas/PaymentIntent"
+
+    PaymentWebhookRequest:
+      type: object
+      required:
+        - event_type
+        - booking_id
+        - payment_intent_id
+        - amount
+        - mode
+        - transaction_status
+      properties:
+        event_type:
+          type: string
+          enum: [payment_intent.succeeded]
+        booking_id:
+          type: string
+          format: uuid
+        payment_intent_id:
+          type: string
+        amount:
+          type: number
+        mode:
+          type: string
+        transaction_status:
+          type: string
+          enum: [Authorized]
+
+    PaymentWebhookResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            booking:
+              $ref: "#/components/schemas/Booking"
+            payment:
+              $ref: "#/components/schemas/Payment"
+
+    CleanupPendingRequest:
+      type: object
+      properties:
+        older_than_minutes:
+          type: number
+          default: 30
+
+    CleanupPendingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            cancelled_count:
+              type: integer
+            cutoff:
+              type: string
+              format: date-time
+
