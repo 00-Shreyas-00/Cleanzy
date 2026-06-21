@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cleanzy Operations</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">C</div>
+          <div>
+            <h1>Cleanzy</h1>
+            <p>Housekeeping operations</p>
+          </div>
+        </div>
+
+        <section class="panel auth-panel">
+          <div class="panel-header">
+            <h2>Session</h2>
+            <span id="sessionStatus" class="status-pill">Signed out</span>
+          </div>
+          <div class="field-grid">
+            <label>
+              Email
+              <input id="emailInput" type="email" autocomplete="email" value="client@example.com" />
+            </label>
+            <label>
+              Password
+              <input id="passwordInput" type="password" autocomplete="current-password" value="SecurePass123!" />
+            </label>
+          </div>
+          <div class="button-row">
+            <button id="loginButton" class="primary">Login</button>
+            <button id="logoutButton">Logout</button>
+          </div>
+          <details>
+            <summary>Create account</summary>
+            <div class="field-grid compact">
+              <label>Name<input id="registerName" value="New Client" /></label>
+              <label>Phone<input id="registerPhone" value="9000000000" /></label>
+              <label>Address<input id="registerAddress" value="Cleanzy Lane" /></label>
+              <label>Role
+                <select id="registerRole">
+                  <option>User</option>
+                  <option>Administrator</option>
+                  <option>Worker</option>
+                </select>
+              </label>
+              <label>Skill<input id="registerSkill" value="Deep Cleaning" /></label>
+              <label>Coordinates<input id="registerCoords" value="12.9716,77.5946" /></label>
+            </div>
+            <button id="registerButton">Register</button>
+          </details>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Notifications</h2>
+            <button id="refreshNotificationsButton" class="icon-button" title="Refresh notifications">↻</button>
+          </div>
+          <div id="notificationsList" class="notification-list"></div>
+        </section>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Live platform workspace</p>
+            <h2 id="welcomeTitle">Backend connected</h2>
+          </div>
+          <canvas id="opsCanvas" width="360" height="110" aria-label="Cleanzy service activity visual"></canvas>
+        </header>
+
+        <nav class="tabs" aria-label="Role workspaces">
+          <button class="tab active" data-view="customerView">Customer</button>
+          <button class="tab" data-view="workerView">Worker</button>
+          <button class="tab" data-view="adminView">Admin</button>
+        </nav>
+
+        <section id="messageBar" class="message-bar" hidden></section>
+
+        <section id="customerView" class="view active">
+          <div class="grid two">
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Service Search</h2>
+                <button id="loadServicesButton" class="icon-button" title="Load services">↻</button>
+              </div>
+              <div class="field-grid">
+                <label>Service<select id="serviceSelect"></select></label>
+                <label>Schedule<input id="scheduleInput" type="datetime-local" /></label>
+                <label>Location<input id="locationInput" value="Client Address" /></label>
+                <label>Coordinates<input id="clientCoordsInput" value="12.9720,77.5950" /></label>
+              </div>
+              <button id="searchButton" class="primary">Search Workers</button>
+              <div id="choicesList" class="result-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2>My Bookings</h2>
+                <button id="loadMyBookingsButton" class="icon-button" title="Load bookings">↻</button>
+              </div>
+              <div id="myBookingsList" class="result-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="workerView" class="view">
+          <div class="grid two">
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Assignments</h2>
+                <button id="loadWorkerBookingsButton" class="icon-button" title="Load assignments">↻</button>
+              </div>
+              <div id="workerBookingsList" class="result-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Attendance</h2>
+                <button id="loadAttendanceButton" class="icon-button" title="Load attendance">↻</button>
+              </div>
+              <div class="button-row">
+                <button id="checkInButton" class="primary">Check In</button>
+                <button id="checkOutButton">Check Out</button>
+              </div>
+              <div id="attendanceList" class="result-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="adminView" class="view">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Operations Overview</h2>
+              <button id="loadAdminButton" class="icon-button" title="Load overview">↻</button>
+            </div>
+            <div id="adminOverview" class="admin-grid"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
+

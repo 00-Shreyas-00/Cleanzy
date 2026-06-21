@@ -6,6 +6,7 @@ import {
   isValidGatewaySignature,
   PaymentWebhookPayload,
 } from '../services/paymentGateway.service';
+import { logNotification } from '../services/notification.service';
 
 const ACTIVE_BOOKING_STATUSES = ['Pending', 'Payment_Required', 'Confirmed'];
 
@@ -92,6 +93,18 @@ export const createBookingCommit = async (
         },
       });
 
+      await logNotification(tx, {
+        userId,
+        type: 'BookingPaymentRequired',
+        message: `Payment is required to confirm your ${service.service_name} booking.`,
+      });
+
+      await logNotification(tx, {
+        userId: staff.user_id,
+        type: 'BookingAssigned',
+        message: `A ${service.service_name} booking is awaiting payment authorization.`,
+      });
+
       const paymentIntent = createPaymentIntent({
         bookingId: booking.booking_id,
         amount: service.base_price,
@@ -159,7 +172,11 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
     const result = await prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({
         where: { booking_id },
-        include: { payment: true },
+        include: {
+          payment: true,
+          service: true,
+          staff: true,
+        },
       });
 
       if (!booking) {
@@ -192,6 +209,18 @@ export const handlePaymentWebhook = async (req: Request, res: Response, next: Ne
       const confirmedBooking = await tx.booking.update({
         where: { booking_id },
         data: { status: 'Confirmed' },
+      });
+
+      await logNotification(tx, {
+        userId: booking.client_id,
+        type: 'BookingConfirmed',
+        message: `Payment authorized. Your ${booking.service.service_name} booking is confirmed.`,
+      });
+
+      await logNotification(tx, {
+        userId: booking.staff.user_id,
+        type: 'BookingConfirmed',
+        message: `A ${booking.service.service_name} booking has been confirmed.`,
       });
 
       return { booking: confirmedBooking, payment };
@@ -231,7 +260,7 @@ export const cleanupPendingBookings = async (
 
     const cutoff = new Date(Date.now() - olderThanMinutes * 60 * 1000);
 
-    const result = await prisma.booking.updateMany({
+    const staleBookings = await prisma.booking.findMany({
       where: {
         status: {
           in: ['Pending', 'Payment_Required'],
@@ -240,9 +269,39 @@ export const cleanupPendingBookings = async (
           lt: cutoff,
         },
       },
-      data: {
-        status: 'Cancelled',
+      include: {
+        service: true,
+        staff: true,
       },
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updateResult = await tx.booking.updateMany({
+        where: {
+          booking_id: {
+            in: staleBookings.map((booking) => booking.booking_id),
+          },
+        },
+        data: {
+          status: 'Cancelled',
+        },
+      });
+
+      for (const booking of staleBookings) {
+        await logNotification(tx, {
+          userId: booking.client_id,
+          type: 'BookingCancelled',
+          message: `Your stale ${booking.service.service_name} booking was cancelled.`,
+        });
+
+        await logNotification(tx, {
+          userId: booking.staff.user_id,
+          type: 'BookingCancelled',
+          message: `A stale ${booking.service.service_name} assignment was cancelled.`,
+        });
+      }
+
+      return updateResult;
     });
 
     res.status(200).json({

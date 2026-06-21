@@ -21,7 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cleanzy-backend
+    container_name: backend
     restart: always
     ports:
       - "3000:3000"

@@ -83,48 +83,44 @@ Implemented:
 - Cleanup cancels stale `Pending` and `Payment_Required` bookings older than the requested threshold without changing confirmed bookings.
 - Phase 4 integration tests prove role restrictions, pending booking creation, payment intent generation, double-booking prevention, unsigned callback rejection, invalid event rejection, valid callback confirmation, duplicate callback rejection, and stale cleanup behavior.
 
+### Phase 5: Portal Workflows and Supporting Subsystems
+
+Implemented:
+- Attendance & Shift Management check-in/check-out APIs and `Attendance` table logging.
+- Worker booking list views for upcoming/past assignments.
+- Administrator overview API exposing metrics, recent bookings, staff performance, holiday requests, and complaints.
+- Feedback submission and automatic recalculation of worker ratings.
+- Notification dispatching on booking creation, confirmation, and payment events.
+
+### Phase 6: Frontend App & Presentation Layer
+
+Implemented:
+- Customer portal for service search, selection, worker rating viewing, booking commit, and feedback submission.
+- Worker portal for booking assignments and attendance punch-cards.
+- Administrator portal for overview monitoring and staff performance tracking.
+- Static serving of frontend assets (`index.html`, `app.js`, `styles.css`).
+- Built presentation test suite verifying all layout, forms, views, and assets.
+
 ## Test Run
 
 Latest commands run:
 
 ```bash
-npm.cmd test
-npx.cmd tsc --noEmit
+npx.cmd vitest run
 ```
 
 Latest result:
 
-- Test files: 4 passed.
-- Tests: 46 passed.
-- TypeScript compile check: passed.
+- Test files: 6 passed.
+- Tests: 58 passed.
 - Suites:
   - `tests/db.test.ts`: 9 passed.
   - `tests/auth.test.ts`: 21 passed.
   - `tests/discovery.test.ts`: 7 passed.
   - `tests/booking.test.ts`: 9 passed.
+  - `tests/portal.test.ts`: 7 passed.
+  - `tests/presentation.test.ts`: 5 passed.
 
-Environment note:
+## Ready for Phase 7
 
-- The integration tests require PostgreSQL at `127.0.0.1:5445`.
-- The project database/backend containers were previously started with `npm.cmd run db:up`.
-
-## Current Implementation Notes
-
-- Phase 4 uses a local mock gateway abstraction suitable for integration testing; it is not a production payment provider integration.
-- The critical state-machine guardrail is enforced: normal booking creation cannot create `Confirmed` bookings, and confirmation occurs only through a signed authorization webhook.
-- The schema currently uses string fields for roles, statuses, payment modes, and transaction statuses. Future work should consider explicit enums or validation constants to keep state transitions controlled.
-- The stale cleanup mechanism uses `scheduled_time` as the age signal because the current schema does not include `created_at` for bookings.
-- Admin concepts from the action plan, such as complaints, holidays, and salary management, are not represented in the current Prisma schema.
-
-## Ready for Phase 5
-
-The project is ready to begin Phase 5: Portal Workflows and Supporting Subsystems.
-
-Recommended next implementation focus:
-
-1. Add worker attendance check-in/check-out APIs.
-2. Add worker booking views for upcoming and past assignments.
-3. Add administrator booking overview APIs.
-4. Add feedback submission and staff rating recalculation.
-5. Add notification logging for booking/payment lifecycle events.
-
+The project is ready to begin Phase 7: Quality Assurance, Hardening & Security Testing.
