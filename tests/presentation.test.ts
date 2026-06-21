@@ -1,17 +1,23 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import app from '../src/app';
 import http from 'http';
+import jwt from 'jsonwebtoken';
 
 const PORT = 4449;
 let server: http.Server;
 
-async function request(method: string, path: string): Promise<{ status: number; headers: Record<string, string>; data: string }> {
+async function request(
+  method: string,
+  path: string,
+  headers?: Record<string, string>
+): Promise<{ status: number; headers: Record<string, string>; data: string }> {
   return new Promise((resolve, reject) => {
     const options: http.RequestOptions = {
       hostname: '127.0.0.1',
       port: PORT,
       path,
       method,
+      headers: headers || {},
     };
 
     const req = http.request(options, (res) => {
@@ -30,6 +36,12 @@ async function request(method: string, path: string): Promise<{ status: number; 
     req.end();
   });
 }
+
+const secret = process.env.JWT_SECRET || 'super-secret-key-change-in-production';
+const makeCookie = (role: string) => {
+  const token = jwt.sign({ user_id: 'test-user-id', email: 'test@example.com', role }, secret);
+  return { Cookie: `cleanzy_token=${token}` };
+};
 
 describe('Cleanzy Presentation & Frontend Integration Tests', () => {
   beforeAll(() => {
@@ -62,61 +74,83 @@ describe('Cleanzy Presentation & Frontend Integration Tests', () => {
     expect(res.data).toContain(':root');
   });
 
-  it('should contain all required DOM elements in index.html', async () => {
-    const res = await request('GET', '/');
+  it('should redirect unauthenticated dashboard access to root', async () => {
+    const customerRes = await request('GET', '/customer/dashboard');
+    expect(customerRes.status).toBe(302);
+    expect(customerRes.headers['location']).toBe('/');
+
+    const workerRes = await request('GET', '/worker/dashboard');
+    expect(workerRes.status).toBe(302);
+    expect(workerRes.headers['location']).toBe('/');
+
+    const adminRes = await request('GET', '/admin/dashboard');
+    expect(adminRes.status).toBe(302);
+    expect(adminRes.headers['location']).toBe('/');
+  });
+
+  it('should redirect authenticated root access to appropriate dashboard', async () => {
+    const res = await request('GET', '/', makeCookie('User'));
+    expect(res.status).toBe(302);
+    expect(res.headers['location']).toBe('/customer/dashboard');
+  });
+
+  it('should redirect dashboard access to correct dashboard if role mismatches', async () => {
+    // Customer accessing admin
+    const resAdmin = await request('GET', '/admin/dashboard', makeCookie('User'));
+    expect(resAdmin.status).toBe(302);
+    expect(resAdmin.headers['location']).toBe('/customer/dashboard');
+
+    // Worker accessing customer
+    const resCustomer = await request('GET', '/customer/dashboard', makeCookie('Worker'));
+    expect(resCustomer.status).toBe(302);
+    expect(resCustomer.headers['location']).toBe('/worker/dashboard');
+  });
+
+  it('should serve Customer Dashboard to User and contain correct elements', async () => {
+    const res = await request('GET', '/customer/dashboard', makeCookie('User'));
     expect(res.status).toBe(200);
     const html = res.data;
 
-    // Check Auth & Session Elements
-    expect(html).toContain('id="emailInput"');
-    expect(html).toContain('id="passwordInput"');
-    expect(html).toContain('id="loginButton"');
-    expect(html).toContain('id="logoutButton"');
-    expect(html).toContain('id="sessionStatus"');
-    expect(html).toContain('id="welcomeTitle"');
-
-    // Check Registration Details Elements
-    expect(html).toContain('id="registerName"');
-    expect(html).toContain('id="registerPhone"');
-    expect(html).toContain('id="registerAddress"');
-    expect(html).toContain('id="registerRole"');
-    expect(html).toContain('id="registerSkill"');
-    expect(html).toContain('id="registerCoords"');
-    expect(html).toContain('id="registerButton"');
-
-    // Check Customer Portal Elements
+    // Check Customer elements
     expect(html).toContain('id="serviceSelect"');
     expect(html).toContain('id="scheduleInput"');
     expect(html).toContain('id="locationInput"');
-    expect(html).toContain('id="clientCoordsInput"');
-    expect(html).toContain('id="searchButton"');
     expect(html).toContain('id="choicesList"');
     expect(html).toContain('id="myBookingsList"');
 
-    // Check Worker Portal Elements
+    // Should NOT contain worker or admin elements
+    expect(html).not.toContain('id="workerBookingsList"');
+    expect(html).not.toContain('id="adminOverview"');
+  });
+
+  it('should serve Worker Dashboard to Worker and contain correct elements', async () => {
+    const res = await request('GET', '/worker/dashboard', makeCookie('Worker'));
+    expect(res.status).toBe(200);
+    const html = res.data;
+
+    // Check Worker elements
     expect(html).toContain('id="workerBookingsList"');
     expect(html).toContain('id="attendanceList"');
     expect(html).toContain('id="checkInButton"');
     expect(html).toContain('id="checkOutButton"');
 
-    // Check Administrator Portal Elements
-    expect(html).toContain('id="adminOverview"');
-
-    // Check Notifications Elements
-    expect(html).toContain('id="notificationsList"');
-    expect(html).toContain('id="refreshNotificationsButton"');
+    // Should NOT contain customer or admin elements
+    expect(html).not.toContain('id="serviceSelect"');
+    expect(html).not.toContain('id="adminOverview"');
   });
 
-  it('should support multi-role tab switching views in index.html', async () => {
-    const res = await request('GET', '/');
+  it('should serve Admin Dashboard to Administrator and contain correct elements', async () => {
+    const res = await request('GET', '/admin/dashboard', makeCookie('Administrator'));
     expect(res.status).toBe(200);
     const html = res.data;
 
-    expect(html).toContain('data-view="customerView"');
-    expect(html).toContain('data-view="workerView"');
-    expect(html).toContain('data-view="adminView"');
-    expect(html).toContain('id="customerView"');
-    expect(html).toContain('id="workerView"');
-    expect(html).toContain('id="adminView"');
+    // Check Admin elements
+    expect(html).toContain('id="adminOverview"');
+    expect(html).toContain('id="bookingsChart"');
+
+    // Should NOT contain customer or worker inputs/buttons
+    expect(html).not.toContain('id="serviceSelect"');
+    expect(html).not.toContain('id="checkInButton"');
   });
 });
+

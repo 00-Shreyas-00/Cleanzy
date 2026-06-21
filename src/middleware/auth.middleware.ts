@@ -61,3 +61,49 @@ export const requireRoles = (roles: string[]) => {
     next();
   };
 };
+
+export const pageGuard = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const cookieHeader = req.headers.cookie;
+    let token: string | null = null;
+    if (cookieHeader) {
+      const cookies = Object.fromEntries(
+        cookieHeader.split(';').map((c) => {
+          const parts = c.trim().split('=');
+          return [parts[0], parts.slice(1).join('=')];
+        })
+      );
+      token = cookies['cleanzy_token'] || null;
+    }
+
+    if (!token) {
+      return res.redirect('/');
+    }
+
+    const secret = process.env.JWT_SECRET || 'super-secret-key-change-in-production';
+    try {
+      const decoded = jwt.verify(token, secret) as {
+        user_id: string;
+        email: string;
+        role: string;
+      };
+
+      if (!allowedRoles.includes(decoded.role)) {
+        if (decoded.role === 'User') {
+          return res.redirect('/customer/dashboard');
+        } else if (decoded.role === 'Worker') {
+          return res.redirect('/worker/dashboard');
+        } else if (decoded.role === 'Administrator') {
+          return res.redirect('/admin/dashboard');
+        } else {
+          return res.redirect('/');
+        }
+      }
+      next();
+    } catch (err) {
+      res.clearCookie('cleanzy_token');
+      return res.redirect('/');
+    }
+  };
+};
+

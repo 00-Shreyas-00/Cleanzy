@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Dashboard - Cleanzy</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="appShell" class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">C</div>
+          <div>
+            <h1>Cleanzy</h1>
+            <p>Admin Portal</p>
+          </div>
+        </div>
+
+        <div class="session-info">
+          <span id="sessionStatus" class="status-pill">Administrator</span>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Notifications</h2>
+            <button id="refreshNotificationsButton" class="icon-button" title="Refresh notifications">↻</button>
+          </div>
+          <div id="notificationsList" class="notification-list"></div>
+        </section>
+
+        <div class="sidebar-footer">
+          <button id="logoutButton" class="danger w-full">Sign Out</button>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Admin workspace</p>
+            <h2 id="welcomeTitle">Loading admin...</h2>
+          </div>
+          <canvas id="opsCanvas" width="360" height="110" aria-label="Cleanzy service activity visual"></canvas>
+        </header>
+
+        <section id="messageBar" class="message-bar" hidden></section>
+
+        <!-- Admin Portal -->
+        <section id="adminView" class="view active">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Operations Overview</h2>
+              <button id="loadAdminButton" class="icon-button" title="Load overview">↻</button>
+            </div>
+            
+            <!-- Dynamic Data Visualization Section -->
+            <div class="visualization-section">
+              <div class="chart-grid">
+                <div class="chart-card">
+                  <h3>Booking Status Distribution</h3>
+                  <div class="canvas-wrapper">
+                    <canvas id="bookingsChart" width="320" height="220"></canvas>
+                  </div>
+                </div>
+                <div class="chart-card">
+                  <h3>Users by Role</h3>
+                  <div class="canvas-wrapper">
+                    <canvas id="usersChart" width="320" height="220"></canvas>
+                  </div>
+                </div>
+                <div class="chart-card wide">
+                  <h3>Staff Performance & Earnings (INR)</h3>
+                  <div class="canvas-wrapper">
+                    <canvas id="performanceChart" width="660" height="240"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="adminOverview" class="admin-grid"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="/pages/admin/dashboard.js"></script>
+  </body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Customer Dashboard - Cleanzy</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="appShell" class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">C</div>
+          <div>
+            <h1>Cleanzy</h1>
+            <p>Customer Portal</p>
+          </div>
+        </div>
+
+        <div class="session-info">
+          <span id="sessionStatus" class="status-pill">Customer</span>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Notifications</h2>
+            <button id="refreshNotificationsButton" class="icon-button" title="Refresh notifications">↻</button>
+          </div>
+          <div id="notificationsList" class="notification-list"></div>
+        </section>
+
+        <div class="sidebar-footer">
+          <button id="logoutButton" class="danger w-full">Sign Out</button>
+        </div>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Customer workspace</p>
+            <h2 id="welcomeTitle">Loading customer...</h2>
+          </div>
+          <canvas id="opsCanvas" width="360" height="110" aria-label="Cleanzy service activity visual"></canvas>
+        </header>
+
+        <section id="messageBar" class="message-bar" hidden></section>
+
+        <!-- Customer Portal -->
+        <section id="customerView" class="view active">
+          <div class="grid two">
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Service Search</h2>
+                <button id="loadServicesButton" class="icon-button" title="Load services">↻</button>
+              </div>
+              <div class="field-grid">
+                <label>Service<select id="serviceSelect"></select></label>
+                <label>Schedule<input id="scheduleInput" type="datetime-local" /></label>
+                <label>Location<input id="locationInput" value="Client Address" /></label>
+                <label>Coordinates<input id="clientCoordsInput" value="12.9720,77.5950" /></label>
+              </div>
+              <button id="searchButton" class="primary">Search Workers</button>
+              <div id="choicesList" class="result-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2>My Bookings</h2>
+                <button id="loadMyBookingsButton" class="icon-button" title="Load bookings">↻</button>
+              </div>
+              <div id="myBookingsList" class="result-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/pages/customer/dashboard.js"></script>
+  </body>
+</html>
