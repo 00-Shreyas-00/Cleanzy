@@ -7,7 +7,64 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <!-- Centered Login Screen (Displayed when logged out) -->
+    <div id="authContainer" class="auth-container">
+      <div class="auth-card">
+        <div class="brand-header">
+          <div class="brand-logo">C</div>
+          <h2>Cleanzy Portal</h2>
+          <p>Sign in to access your housekeeping workspace</p>
+        </div>
+
+        <!-- Role Select Tabs -->
+        <div class="role-selector" role="tablist">
+          <button class="role-tab active" data-role="User">Customer</button>
+          <button class="role-tab" data-role="Worker">Housekeeper</button>
+          <button class="role-tab" data-role="Administrator">Administrator</button>
+        </div>
+
+        <section class="auth-form-section">
+          <!-- Hidden role select to maintain compatibility with app.js API -->
+          <select id="registerRole" style="display: none;">
+            <option value="User" selected>User</option>
+            <option value="Worker">Worker</option>
+            <option value="Administrator">Administrator</option>
+          </select>
+
+          <div class="field-grid">
+            <label>
+              Email Address
+              <input id="emailInput" type="email" autocomplete="email" value="client@example.com" />
+            </label>
+            <label>
+              Password
+              <input id="passwordInput" type="password" autocomplete="current-password" value="SecurePass123!" />
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="loginButton" class="primary w-full">Sign In</button>
+          </div>
+
+          <div class="auth-divider"><span>or create account</span></div>
+
+          <details class="register-details">
+            <summary>Create a new account</summary>
+            <div class="field-grid compact">
+              <label>Name<input id="registerName" value="New Client" /></label>
+              <label>Phone<input id="registerPhone" value="9000000000" /></label>
+              <label>Address<input id="registerAddress" value="Cleanzy Lane" /></label>
+              <label id="registerSkillLabel" style="display: none;">Skill<input id="registerSkill" value="Deep Cleaning" /></label>
+              <label id="registerCoordsLabel" style="display: none;">Coordinates<input id="registerCoords" value="12.9716,77.5946" /></label>
+            </div>
+            <button id="registerButton" class="w-full">Register</button>
+          </details>
+        </section>
+      </div>
+    </div>
+
+    <!-- Main Workspace (Hidden when logged out) -->
+    <div id="appShell" class="app-shell" style="display: none;">
       <aside class="sidebar">
         <div class="brand">
           <div class="brand-mark">C</div>
@@ -17,44 +74,9 @@
           </div>
         </div>
 
-        <section class="panel auth-panel">
-          <div class="panel-header">
-            <h2>Session</h2>
-            <span id="sessionStatus" class="status-pill">Signed out</span>
-          </div>
-          <div class="field-grid">
-            <label>
-              Email
-              <input id="emailInput" type="email" autocomplete="email" value="client@example.com" />
-            </label>
-            <label>
-              Password
-              <input id="passwordInput" type="password" autocomplete="current-password" value="SecurePass123!" />
-            </label>
-          </div>
-          <div class="button-row">
-            <button id="loginButton" class="primary">Login</button>
-            <button id="logoutButton">Logout</button>
-          </div>
-          <details>
-            <summary>Create account</summary>
-            <div class="field-grid compact">
-              <label>Name<input id="registerName" value="New Client" /></label>
-              <label>Phone<input id="registerPhone" value="9000000000" /></label>
-              <label>Address<input id="registerAddress" value="Cleanzy Lane" /></label>
-              <label>Role
-                <select id="registerRole">
-                  <option>User</option>
-                  <option>Administrator</option>
-                  <option>Worker</option>
-                </select>
-              </label>
-              <label>Skill<input id="registerSkill" value="Deep Cleaning" /></label>
-              <label>Coordinates<input id="registerCoords" value="12.9716,77.5946" /></label>
-            </div>
-            <button id="registerButton">Register</button>
-          </details>
-        </section>
+        <div class="session-info">
+          <span id="sessionStatus" class="status-pill">Signed out</span>
+        </div>
 
         <section class="panel">
           <div class="panel-header">
@@ -63,6 +85,10 @@
           </div>
           <div id="notificationsList" class="notification-list"></div>
         </section>
+
+        <div class="sidebar-footer">
+          <button id="logoutButton" class="danger w-full">Sign Out</button>
+        </div>
       </aside>
 
       <main>
@@ -74,7 +100,8 @@
           <canvas id="opsCanvas" width="360" height="110" aria-label="Cleanzy service activity visual"></canvas>
         </header>
 
-        <nav class="tabs" aria-label="Role workspaces">
+        <!-- Navigation Tabs (Only visible for Admins if desired, otherwise hidden for normal role segregation) -->
+        <nav id="roleTabs" class="tabs" aria-label="Role workspaces" style="display: none;">
           <button class="tab active" data-view="customerView">Customer</button>
           <button class="tab" data-view="workerView">Worker</button>
           <button class="tab" data-view="adminView">Admin</button>
@@ -82,7 +109,8 @@
 
         <section id="messageBar" class="message-bar" hidden></section>
 
-        <section id="customerView" class="view active">
+        <!-- Customer Portal -->
+        <section id="customerView" class="view">
           <div class="grid two">
             <section class="panel">
               <div class="panel-header">
@@ -109,6 +137,7 @@
           </div>
         </section>
 
+        <!-- Worker Portal -->
         <section id="workerView" class="view">
           <div class="grid two">
             <section class="panel">
@@ -133,12 +162,38 @@
           </div>
         </section>
 
+        <!-- Admin Portal -->
         <section id="adminView" class="view">
           <section class="panel">
             <div class="panel-header">
               <h2>Operations Overview</h2>
               <button id="loadAdminButton" class="icon-button" title="Load overview">↻</button>
             </div>
+            
+            <!-- Dynamic Data Visualization Section -->
+            <div class="visualization-section">
+              <div class="chart-grid">
+                <div class="chart-card">
+                  <h3>Booking Status Distribution</h3>
+                  <div class="canvas-wrapper">
+                    <canvas id="bookingsChart" width="320" height="220"></canvas>
+                  </div>
+                </div>
+                <div class="chart-card">
+                  <h3>Users by Role</h3>
+                  <div class="canvas-wrapper">
+                    <canvas id="usersChart" width="320" height="220"></canvas>
+                  </div>
+                </div>
+                <div class="chart-card wide">
+                  <h3>Staff Performance & Earnings (INR)</h3>
+                  <div class="canvas-wrapper">
+                    <canvas id="performanceChart" width="660" height="240"></canvas>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div id="adminOverview" class="admin-grid"></div>
           </section>
         </section>
@@ -148,4 +203,3 @@
     <script src="/app.js"></script>
   </body>
 </html>
-
