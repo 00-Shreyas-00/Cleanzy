@@ -12,33 +12,33 @@ variables:
 run_tests:
   stage: test
   script:
-    - echo -e "${COLOR_CYAN}[1/4] Initializing environment...${COLOR_RESET}"
-    - sleep 1
-    - docker compose up -d
-    - echo -e "${COLOR_CYAN}[2/4] Syncing container logs...${COLOR_RESET}"
-    - docker compose logs --tail=10
-    - echo -e "${COLOR_YELLOW}[3/4] Running test matrix...${COLOR_RESET}"
-    - sleep 1
-    - npm test
-    - echo -e "${COLOR_GREEN}[4/4] Verification: SUCCESS.${COLOR_RESET}"
-    - echo -e "${COLOR_CYAN}[~] Cleaning up resources...${COLOR_RESET}"
-    - docker compose down
+    - 'echo -e "${COLOR_CYAN}[1/4] Initializing environment...${COLOR_RESET}"'
+    - 'sleep 1'
+    - 'docker compose up -d'
+    - 'echo -e "${COLOR_CYAN}[2/4] Syncing container logs...${COLOR_RESET}"'
+    - 'docker compose logs --tail=10'
+    - 'echo -e "${COLOR_YELLOW}[3/4] Running test matrix...${COLOR_RESET}"'
+    - 'sleep 1'
+    - 'npm test'
+    - 'echo -e "${COLOR_GREEN}[4/4] Verification: SUCCESS.${COLOR_RESET}"'
+    - 'echo -e "${COLOR_CYAN}[~] Cleaning up resources...${COLOR_RESET}"'
+    - 'docker compose down'
 
 build_app:
   stage: build
   script:
-    - echo -e "${COLOR_CYAN}[1/3] Preparing build pipeline...${COLOR_RESET}"
-    - sleep 1
-    - echo -e "${COLOR_CYAN}[2/3] Compiling application layers...${COLOR_RESET}"
-    - docker build -t my-image-name .
-    - echo -e "${COLOR_GREEN}[3/3] Build finalized.${COLOR_RESET}"
+    - 'echo -e "${COLOR_CYAN}[1/3] Preparing build pipeline...${COLOR_RESET}"'
+    - 'sleep 1'
+    - 'echo -e "${COLOR_CYAN}[2/3] Compiling application layers...${COLOR_RESET}"'
+    - 'docker build -t my-image-name .'
+    - 'echo -e "${COLOR_GREEN}[3/3] Build finalized.${COLOR_RESET}"'
 
 deploy_app:
   stage: deploy
   script:
-    - echo -e "${COLOR_YELLOW}[1/3] Connecting to production cluster...${COLOR_RESET}"
-    - sleep 1
-    - echo -e "${COLOR_CYAN}[2/3] Launching live containers...${COLOR_RESET}"
-    - docker compose up -d
-    - sleep 1
-    - echo -e "${COLOR_GREEN}[3/3] System status: ONLINE.${COLOR_RESET}"
+    - 'echo -e "${COLOR_YELLOW}[1/3] Connecting to production cluster...${COLOR_RESET}"'
+    - 'sleep 1'
+    - 'echo -e "${COLOR_CYAN}[2/3] Launching live containers...${COLOR_RESET}"'
+    - 'docker compose up -d'
+    - 'sleep 1'
+    - 'echo -e "${COLOR_GREEN}[3/3] System status: ONLINE.${COLOR_RESET}"'
