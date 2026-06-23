@@ -5,6 +5,8 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 
+const money = (value) => `INR ${Number(value || 0).toFixed(2)}`;
+
 const api = async (path, options = {}) => {
   const response = await fetch(path, {
     method: options.method || 'GET',
@@ -51,9 +53,23 @@ const renderSession = () => {
 };
 
 const tagClass = (status) => {
-  if (status === 'Confirmed') return 'tag';
-  if (status === 'Cancelled') return 'tag danger';
-  return 'tag warn';
+  if (status === 'Confirmed' || status === 'Accepted') return 'tag';
+  if (status === 'Cancelled' || status === 'Declined' || status === 'Rejected') return 'tag danger';
+  if (status === 'Approved') return 'tag';
+  if (status === 'Pending') return 'tag warn';
+  return 'tag';
+};
+
+const getSharedLeaveRequests = () => {
+  try {
+    return JSON.parse(localStorage.getItem('cleanzy_leave_requests') || '[]');
+  } catch (err) {
+    return [];
+  }
+};
+
+const saveSharedLeaveRequests = (requests) => {
+  localStorage.setItem('cleanzy_leave_requests', JSON.stringify(requests));
 };
 
 const renderEmpty = (target, text) => {
@@ -62,27 +78,163 @@ const renderEmpty = (target, text) => {
   }
 };
 
+const updateBookingCardStatus = (bookingId, status) => {
+  state.jobStatusByBookingId = state.jobStatusByBookingId || {};
+  state.jobStatusByBookingId[bookingId] = status;
+  const statusEl = document.querySelector(`[data-booking-status="${bookingId}"]`);
+  const acceptBtn = document.querySelector(`[data-action="accept"][data-booking-id="${bookingId}"]`);
+  const declineBtn = document.querySelector(`[data-action="decline"][data-booking-id="${bookingId}"]`);
+  if (statusEl) {
+    statusEl.textContent = status;
+    statusEl.className = tagClass(status);
+  }
+  if (acceptBtn) acceptBtn.disabled = status === 'Accepted';
+  if (declineBtn) declineBtn.disabled = status === 'Declined';
+};
+
+const acceptJob = async (bookingId) => {
+  // Stub: call accept job flow and update locally.
+  console.log(`acceptJob(${bookingId})`);
+  updateBookingCardStatus(bookingId, 'Accepted');
+  showMessage('Booking accepted locally.');
+};
+
+const declineJob = async (bookingId) => {
+  // Stub: call decline job flow and update locally.
+  console.log(`declineJob(${bookingId})`);
+  updateBookingCardStatus(bookingId, 'Declined');
+  showMessage('Booking declined locally.');
+};
+
+const submitLeaveRequest = async (workerId, fromDate, toDate, remarks) => {
+  // Stub: create leave request locally in shared state.
+  console.log(`submitLeaveRequest(${workerId}, ${fromDate}, ${toDate}, ${remarks})`);
+  const requests = getSharedLeaveRequests();
+  const newRequest = {
+    request_id: `lr_${Date.now()}`,
+    worker_id: workerId,
+    worker_name: state.user.name || 'Worker',
+    from_date: fromDate,
+    to_date: toDate,
+    remarks,
+    status: 'Pending',
+    created_at: new Date().toISOString(),
+  };
+  requests.unshift(newRequest);
+  saveSharedLeaveRequests(requests);
+  return newRequest;
+};
+
+const renderLeaveRequests = () => {
+  const target = $('leaveRequestsList');
+  const requests = getSharedLeaveRequests().filter((item) => item.worker_id === state.user.user_id);
+  if (!requests.length) {
+    renderEmpty(target, 'No leave requests recorded.');
+    return;
+  }
+  target.innerHTML = requests
+    .map(
+      (request) => `
+      <article class="result-card">
+        <div class="metric-row">
+          <span class="tag">${new Date(request.from_date).toLocaleDateString()} – ${new Date(request.to_date).toLocaleDateString()}</span>
+          <span class="${tagClass(request.status)}">${request.status}</span>
+        </div>
+        <p>${request.remarks || 'No remarks provided.'}</p>
+      </article>`
+    )
+    .join('');
+};
+
 const loadWorkerBookings = async () => {
   const data = await api('/api/worker/bookings');
+  state.pastBookings = data.data.past || [];
+  renderEarnings();
+
   const target = $('workerBookingsList');
   const combined = [...data.data.upcoming, ...data.data.past];
   if (!combined.length) {
     renderEmpty(target, 'No assigned bookings.');
     return;
   }
+  state.workerBookings = combined;
   target.innerHTML = combined
-    .map(
-      (booking) => `
+    .map((booking) => {
+      const localStatus = state.jobStatusByBookingId?.[booking.booking_id] || booking.status || 'Pending';
+      const disabledAccept = localStatus === 'Accepted' ? 'disabled' : '';
+      const disabledDecline = localStatus === 'Declined' ? 'disabled' : '';
+      return `
       <article class="result-card">
         <h3>${booking.service.service_name}</h3>
         <div class="metric-row">
-          <span class="${tagClass(booking.status)}">${booking.status}</span>
+          <span data-booking-status="${booking.booking_id}" class="${tagClass(localStatus)}">${localStatus}</span>
           <span class="tag">${booking.client.name}</span>
         </div>
         <p>${new Date(booking.scheduled_time).toLocaleString()} · ${booking.location}</p>
-      </article>`
+        <div class="button-row" style="margin-top: 14px; gap: 8px;">
+          <button class="primary" data-action="accept" data-booking-id="${booking.booking_id}" ${disabledAccept}>Accept</button>
+          <button class="danger" data-action="decline" data-booking-id="${booking.booking_id}" ${disabledDecline}>Decline</button>
+        </div>
+      </article>`;
+    })
+    .join('');
+};
+
+const requestPayout = (workerId, amount) => {
+  // TODO: Integrate Razorpay payout/route API.
+  console.log(`requestPayout: workerId=${workerId}, amount=${amount}`);
+  showMessage(`Payout request of INR ${amount.toFixed(2)} submitted for worker: ${workerId}`);
+};
+
+const renderEarnings = () => {
+  const target = $('earningsContainer');
+  if (!target) return;
+
+  const past = state.pastBookings || [];
+  if (!past.length) {
+    target.innerHTML = `<p>No completed jobs yet.</p>`;
+    return;
+  }
+
+  const totalEarnings = past.reduce((sum, booking) => sum + (booking.service.base_price || 0), 0);
+
+  const tableRows = past
+    .map(
+      (booking) => `
+      <tr>
+        <td>${booking.service.service_name}</td>
+        <td>${new Date(booking.scheduled_time).toLocaleDateString()}</td>
+        <td>${money(booking.service.base_price)}</td>
+      </tr>`
     )
     .join('');
+
+  target.innerHTML = `
+    <div class="earnings-total-card">
+      <span class="earnings-total-label">Total Earnings:</span>
+      <span class="earnings-total-value">${money(totalEarnings)}</span>
+    </div>
+    <div class="earnings-table-wrapper">
+      <table class="earnings-table">
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </div>
+    <button id="requestPayoutButton" class="primary w-full" style="margin-top: 14px;">Request Payout</button>
+  `;
+
+  $('requestPayoutButton').addEventListener('click', () => {
+    const workerId = state.user.user_id;
+    requestPayout(workerId, totalEarnings);
+  });
 };
 
 const loadAttendance = async () => {
@@ -178,14 +330,41 @@ const wireEvents = () => {
   });
 
   $('loadWorkerBookingsButton').addEventListener('click', () => loadWorkerBookings().catch((error) => showMessage(error.message, true)));
+  $('loadLeaveRequestsButton').addEventListener('click', () => renderLeaveRequests());
   $('loadAttendanceButton').addEventListener('click', () => loadAttendance().catch((error) => showMessage(error.message, true)));
+  $('loadEarningsButton').addEventListener('click', () => loadWorkerBookings().catch((error) => showMessage(error.message, true)));
+  $('requestLeaveButton').addEventListener('click', () => {
+    $('leaveModal').classList.add('active');
+  });
+  $('closeLeaveModal').addEventListener('click', () => $('leaveModal').classList.remove('active'));
+  $('cancelLeaveModal').addEventListener('click', () => $('leaveModal').classList.remove('active'));
+  $('submitLeaveModal').addEventListener('click', async () => {
+    const fromDate = $('leaveFromInput').value;
+    const toDate = $('leaveToInput').value;
+    const remarks = $('leaveRemarksInput').value.trim();
+    if (!fromDate || !toDate) {
+      showMessage('Please select both from and to dates.', true);
+      return;
+    }
+    await submitLeaveRequest(state.user.user_id, fromDate, toDate, remarks).catch((error) => showMessage(error.message, true));
+    $('leaveModal').classList.remove('active');
+    $('leaveFromInput').value = '';
+    $('leaveToInput').value = '';
+    $('leaveRemarksInput').value = '';
+    renderLeaveRequests();
+  });
+
   $('checkInButton').addEventListener('click', () => attendanceAction('check-in').catch((error) => showMessage(error.message, true)));
   $('checkOutButton').addEventListener('click', () => attendanceAction('check-out').catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
 
   document.body.addEventListener('click', (event) => {
     const readId = event.target.dataset.read;
+    const action = event.target.dataset.action;
+    const bookingId = event.target.dataset.bookingId;
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
+    if (action === 'accept' && bookingId) acceptJob(bookingId).catch((error) => showMessage(error.message, true));
+    if (action === 'decline' && bookingId) declineJob(bookingId).catch((error) => showMessage(error.message, true));
   });
 };
 
@@ -194,6 +373,7 @@ const init = async () => {
   drawOpsCanvas();
   wireEvents();
   await loadWorkerBookings().catch((error) => showMessage(error.message, true));
+  renderLeaveRequests();
   await loadAttendance().catch((error) => showMessage(error.message, true));
   await loadNotifications().catch(() => undefined);
 };

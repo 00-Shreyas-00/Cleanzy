@@ -79,8 +79,41 @@
 
             <div id="adminOverview" class="admin-grid"></div>
           </section>
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Leave Requests</h2>
+              <button id="loadAdminLeaveRequestsButton" class="icon-button" title="Refresh leave requests">↻</button>
+            </div>
+            <div id="adminLeaveRequestsContainer"></div>
+          </section>
         </section>
       </main>
+    </div>
+
+    <!-- Pay Worker Modal -->
+    <div id="payWorkerModal" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>Confirm Payment</h2>
+          <button id="closePayWorkerModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-summary-card">
+            <div class="modal-summary-row">
+              <span class="modal-summary-label">Worker Name</span>
+              <span id="payWorkerName" class="modal-summary-value"></span>
+            </div>
+            <div class="modal-summary-row">
+              <span class="modal-summary-label font-bold text-teal-dark">Amount to Pay</span>
+              <span id="payWorkerAmount" class="modal-summary-value font-bold text-teal-dark"></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancelPayWorkerModal">Cancel</button>
+          <button id="confirmPayWorkerModal" class="primary">Confirm Payment</button>
+        </div>
+      </div>
     </div>
 
     <script src="/pages/admin/dashboard.js"></script>

@@ -131,12 +131,13 @@ const bookWorker = async (staffId) => {
 
 const loadMyBookings = async () => {
   const data = await api('/api/bookings/my');
+  state.bookings = data.data.bookings || [];
   const target = $('myBookingsList');
-  if (!data.data.bookings.length) {
+  if (!state.bookings.length) {
     renderEmpty(target, 'No customer bookings yet.');
     return;
   }
-  target.innerHTML = data.data.bookings
+  target.innerHTML = state.bookings
     .map(
       (booking) => `
       <article class="result-card">
@@ -158,9 +159,68 @@ const loadMyBookings = async () => {
                </div>`
             : ''
         }
+        ${
+          booking.status === 'Payment_Required'
+            ? `<div class="button-row">
+                 <button class="primary" data-pay-now="${booking.booking_id}">Pay Now</button>
+               </div>`
+            : ''
+        }
       </article>`
     )
     .join('');
+};
+
+const initiateRazorpayPayment = (bookingId, amount) => {
+  // TODO: Replace with live Razorpay key_id and order_id from backend.
+  console.log(`initiateRazorpayPayment: bookingId=${bookingId}, amount=${amount}`);
+  showMessage(`Placeholder: Razorpay payment of INR ${amount.toFixed(2)} initiated for Booking: ${bookingId}`);
+  closePaymentModal();
+};
+
+const openPaymentModal = (bookingId) => {
+  const booking = state.bookings.find((b) => b.booking_id === bookingId);
+  if (!booking) return;
+
+  const modal = $('paymentModal');
+  const content = $('paymentModalContent');
+  if (!modal || !content) return;
+
+  content.innerHTML = `
+    <div class="modal-summary-card">
+      <div class="modal-summary-row">
+        <span class="modal-summary-label">Service</span>
+        <span class="modal-summary-value">${booking.service.service_name}</span>
+      </div>
+      <div class="modal-summary-row">
+        <span class="modal-summary-label">Worker</span>
+        <span class="modal-summary-value">${booking.staff.user.name}</span>
+      </div>
+      <div class="modal-summary-row">
+        <span class="modal-summary-label">Scheduled Date</span>
+        <span class="modal-summary-value">${new Date(booking.scheduled_time).toLocaleString()}</span>
+      </div>
+      <div class="modal-summary-row">
+        <span class="modal-summary-label">Amount</span>
+        <span class="modal-summary-value">${money(booking.service.base_price)}</span>
+      </div>
+    </div>
+  `;
+
+  const confirmBtn = $('confirmPaymentModal');
+  if (confirmBtn) {
+    confirmBtn.dataset.bookingId = bookingId;
+    confirmBtn.dataset.amount = booking.service.base_price;
+  }
+
+  modal.classList.add('active');
+};
+
+const closePaymentModal = () => {
+  const modal = $('paymentModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
 };
 
 const submitFeedback = async (bookingId) => {
@@ -246,13 +306,23 @@ const wireEvents = () => {
   $('loadMyBookingsButton').addEventListener('click', () => loadMyBookings().catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
 
+  $('closePaymentModal').addEventListener('click', closePaymentModal);
+  $('cancelPaymentModal').addEventListener('click', closePaymentModal);
+  $('confirmPaymentModal').addEventListener('click', (e) => {
+    const bookingId = e.target.dataset.bookingId;
+    const amount = parseFloat(e.target.dataset.amount);
+    initiateRazorpayPayment(bookingId, amount);
+  });
+
   document.body.addEventListener('click', (event) => {
     const bookId = event.target.dataset.book;
     const feedbackId = event.target.dataset.feedback;
     const readId = event.target.dataset.read;
+    const payNowId = event.target.dataset.payNow;
     if (bookId) bookWorker(bookId).catch((error) => showMessage(error.message, true));
     if (feedbackId) submitFeedback(feedbackId).catch((error) => showMessage(error.message, true));
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
+    if (payNowId) openPaymentModal(payNowId);
   });
 };
 

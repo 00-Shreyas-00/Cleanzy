@@ -58,6 +58,37 @@ const renderEmpty = (target, text) => {
   }
 };
 
+const getSharedLeaveRequests = () => {
+  try {
+    return JSON.parse(localStorage.getItem('cleanzy_leave_requests') || '[]');
+  } catch (err) {
+    return [];
+  }
+};
+
+const saveSharedLeaveRequests = (requests) => {
+  localStorage.setItem('cleanzy_leave_requests', JSON.stringify(requests));
+};
+
+const formatDate = (iso) => {
+  if (!iso) return '-';
+  const date = new Date(iso);
+  return date.toLocaleDateString();
+};
+
+const tagClass = (status) => {
+  if (status === 'Approved' || status === 'Accepted') return 'tag';
+  if (status === 'Declined' || status === 'Rejected') return 'tag danger';
+  if (status === 'Pending') return 'tag warn';
+  return 'tag';
+};
+
+const jobStatusClass = (status) => {
+  if (status === 'Accepted') return 'tag';
+  if (status === 'Declined') return 'tag danger';
+  return 'tag warn';
+};
+
 /* --- Data Visualizations via Canvas --- */
 const drawBookingsChart = (counts) => {
   const canvas = $('bookingsChart');
@@ -263,6 +294,76 @@ const drawPerformanceChart = (staff) => {
   });
 };
 
+const loadAdminLeaveRequests = async () => {
+  const target = $('adminLeaveRequestsContainer');
+  const requests = getSharedLeaveRequests();
+  if (!requests.length) {
+    renderEmpty(target, 'No leave requests available.');
+    return;
+  }
+  const tableRows = requests
+    .map((request) => {
+      return `
+      <tr>
+        <td>${request.worker_name}</td>
+        <td>${formatDate(request.from_date)}</td>
+        <td>${formatDate(request.to_date)}</td>
+        <td>${request.remarks || 'No remarks'}</td>
+        <td><span class="${tagClass(request.status)}">${request.status}</span></td>
+        <td>
+          <button class="primary" data-approve-leave="${request.request_id}">Approve</button>
+          <button class="danger" data-reject-leave="${request.request_id}">Reject</button>
+        </td>
+      </tr>`;
+    })
+    .join('');
+
+  target.innerHTML = `
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Worker Name</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Remarks</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </div>`;
+};
+
+const approveLeave = async (requestId) => {
+  console.log(`approveLeave(${requestId})`);
+  const requests = getSharedLeaveRequests().map((request) => {
+    if (request.request_id === requestId) {
+      return { ...request, status: 'Approved' };
+    }
+    return request;
+  });
+  saveSharedLeaveRequests(requests);
+  await loadAdminLeaveRequests();
+  showMessage('Leave request approved locally.');
+};
+
+const rejectLeave = async (requestId) => {
+  console.log(`rejectLeave(${requestId})`);
+  const requests = getSharedLeaveRequests().map((request) => {
+    if (request.request_id === requestId) {
+      return { ...request, status: 'Rejected' };
+    }
+    return request;
+  });
+  saveSharedLeaveRequests(requests);
+  await loadAdminLeaveRequests();
+  showMessage('Leave request rejected locally.');
+};
+
 const loadAdminOverview = async () => {
   const data = await api('/api/admin/overview');
   const overview = data.data;
@@ -279,18 +380,25 @@ const loadAdminOverview = async () => {
     .map((item) => `<span class="tag">${item.role}: ${item.count}</span>`)
     .join('');
   const staffCards = overview.staff_performance
-    .map(
-      (staff) => `
+    .map((staff) => {
+      const recentStatus = staff.last_job_status || staff.most_recent_job_response || staff.last_response || 'Pending';
+      return `
       <article class="result-card">
-        <h3>${staff.worker.name}</h3>
-        <p>${staff.skill_type} · ${staff.rating.toFixed(1)} rating</p>
+        <div class="metric-row" style="justify-content: space-between; gap: 10px; align-items: flex-start;">
+          <div>
+            <h3>${staff.worker.name}</h3>
+            <p>${staff.skill_type} · ${staff.rating.toFixed(1)} rating</p>
+          </div>
+          <span class="${jobStatusClass(recentStatus)}">${recentStatus}</span>
+        </div>
         <div class="metric-row">
           <span class="tag">${staff.confirmed_bookings} confirmed</span>
           <span class="tag">${staff.attendance_days} attendance</span>
           <span class="tag">${money(staff.salary_preview.estimated_amount)}</span>
         </div>
-      </article>`
-    )
+        <button class="primary w-full pay-worker-btn" style="margin-top: 8px;" data-pay-worker="${staff.worker.user_id}" data-worker-name="${staff.worker.name}" data-amount="${staff.salary_preview.estimated_amount}">Pay Worker</button>
+      </article>`;
+    })
     .join('');
   $('adminOverview').innerHTML = `
     <article class="result-card">
@@ -322,6 +430,36 @@ const loadAdminOverview = async () => {
           .join('') || '<p>No recent bookings.</p>'}
       </div>
     </article>`;
+};
+
+const processWorkerPayment = (workerId, amount) => {
+  // TODO: Razorpay route/payout API.
+  console.log(`processWorkerPayment: workerId=${workerId}, amount=${amount}`);
+  showMessage(`Mock Payment of INR ${amount.toFixed(2)} processed for worker: ${workerId}`);
+  closePayWorkerModal();
+};
+
+const openPayWorkerModal = (workerId, workerName, amount) => {
+  const modal = $('payWorkerModal');
+  const confirmBtn = $('confirmPayWorkerModal');
+  const nameEl = $('payWorkerName');
+  const amountEl = $('payWorkerAmount');
+  if (!modal || !confirmBtn || !nameEl || !amountEl) return;
+
+  nameEl.textContent = workerName;
+  amountEl.textContent = money(amount);
+
+  confirmBtn.dataset.workerId = workerId;
+  confirmBtn.dataset.amount = amount;
+
+  modal.classList.add('active');
+};
+
+const closePayWorkerModal = () => {
+  const modal = $('payWorkerModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
 };
 
 const loadNotifications = async () => {
@@ -393,10 +531,29 @@ const wireEvents = () => {
 
   $('loadAdminButton').addEventListener('click', () => loadAdminOverview().catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
+  $('loadAdminLeaveRequestsButton').addEventListener('click', () => loadAdminLeaveRequests().catch((error) => showMessage(error.message, true)));
+
+  $('closePayWorkerModal').addEventListener('click', closePayWorkerModal);
+  $('cancelPayWorkerModal').addEventListener('click', closePayWorkerModal);
+  $('confirmPayWorkerModal').addEventListener('click', (e) => {
+    const workerId = e.target.dataset.workerId;
+    const amount = parseFloat(e.target.dataset.amount);
+    processWorkerPayment(workerId, amount);
+  });
 
   document.body.addEventListener('click', (event) => {
     const readId = event.target.dataset.read;
+    const payWorkerId = event.target.dataset.payWorker;
+    const approveId = event.target.dataset.approveLeave;
+    const rejectId = event.target.dataset.rejectLeave;
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
+    if (payWorkerId) {
+      const name = event.target.dataset.workerName;
+      const amount = parseFloat(event.target.dataset.amount);
+      openPayWorkerModal(payWorkerId, name, amount);
+    }
+    if (approveId) approveLeave(approveId).catch((error) => showMessage(error.message, true));
+    if (rejectId) rejectLeave(rejectId).catch((error) => showMessage(error.message, true));
   });
 };
 
@@ -405,6 +562,7 @@ const init = async () => {
   drawOpsCanvas();
   wireEvents();
   await loadAdminOverview().catch((error) => showMessage(error.message, true));
+  await loadAdminLeaveRequests().catch((error) => showMessage(error.message, true));
   await loadNotifications().catch(() => undefined);
 };
 

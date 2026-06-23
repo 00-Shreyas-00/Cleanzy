@@ -74,6 +74,23 @@
         </section>
       </main>
     </div>
+ 
+    <!-- Razorpay Payment Modal -->
+    <div id="paymentModal" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>Order Summary</h2>
+          <button id="closePaymentModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="paymentModalContent"></div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancelPaymentModal">Cancel</button>
+          <button id="confirmPaymentModal" class="primary">Proceed to Pay (Razorpay)</button>
+        </div>
+      </div>
+    </div>
 
     <script src="/pages/customer/dashboard.js"></script>
   </body>

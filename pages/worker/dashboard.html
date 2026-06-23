@@ -58,6 +58,17 @@
 
             <section class="panel">
               <div class="panel-header">
+                <h2>Leave Requests</h2>
+                <button id="loadLeaveRequestsButton" class="icon-button" title="Refresh leave requests">↻</button>
+              </div>
+              <div class="button-row" style="margin-bottom: 12px;">
+                <button id="requestLeaveButton" class="primary w-full">Request Leave</button>
+              </div>
+              <div id="leaveRequestsList" class="result-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header">
                 <h2>Attendance</h2>
                 <button id="loadAttendanceButton" class="icon-button" title="Load attendance">↻</button>
               </div>
@@ -67,9 +78,38 @@
               </div>
               <div id="attendanceList" class="result-list"></div>
             </section>
+
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Earnings</h2>
+                <button id="loadEarningsButton" class="icon-button" title="Refresh earnings">↻</button>
+              </div>
+              <div id="earningsContainer"></div>
+            </section>
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- Request Leave Modal -->
+    <div id="leaveModal" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h2>Request Leave</h2>
+          <button id="closeLeaveModal" class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="field-grid">
+            <label>From Date<input id="leaveFromInput" type="datetime-local" /></label>
+            <label>To Date<input id="leaveToInput" type="datetime-local" /></label>
+            <label>Remarks / Reason<textarea id="leaveRemarksInput" placeholder="Enter remarks..."></textarea></label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancelLeaveModal">Cancel</button>
+          <button id="submitLeaveModal" class="primary">Submit</button>
+        </div>
+      </div>
     </div>
 
     <script src="/pages/worker/dashboard.js"></script>
