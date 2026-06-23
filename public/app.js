@@ -41,6 +41,15 @@ const setSession = (token, user) => {
   renderSession();
 };
 
+const updateRegisterVisibility = (role) => {
+  const details = $('registerDetails');
+  if (!details) return;
+  details.style.display = role === 'User' ? 'block' : 'none';
+  if (role !== 'User') {
+    details.removeAttribute('open');
+  }
+};
+
 const renderSession = () => {
   const signedIn = Boolean(state.token && state.user);
   if (signedIn) {
@@ -69,6 +78,7 @@ const wireEvents = () => {
       const isWorker = role === 'Worker';
       $('registerSkillLabel').style.display = isWorker ? 'grid' : 'none';
       $('registerCoordsLabel').style.display = isWorker ? 'grid' : 'none';
+      updateRegisterVisibility(role);
     });
   });
 
@@ -120,6 +130,7 @@ const wireEvents = () => {
 
 const init = () => {
   renderSession();
+  updateRegisterVisibility($('registerRole').value);
   wireEvents();
 };
 

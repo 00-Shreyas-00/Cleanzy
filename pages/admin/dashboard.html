@@ -25,6 +25,7 @@
           <div class="panel-header">
             <h2>Notifications</h2>
             <button id="refreshNotificationsButton" class="icon-button" title="Refresh notifications">↻</button>
+            <button id="clearNotificationsButton" class="secondary">Clear All</button>
           </div>
           <div id="notificationsList" class="notification-list"></div>
         </section>
@@ -47,19 +48,21 @@
 
         <!-- Admin Portal -->
         <section id="adminView" class="view active">
-          <section class="panel">
-            <div class="panel-header">
-              <h2>Operations Overview</h2>
-              <button id="loadAdminButton" class="icon-button" title="Load overview">↻</button>
-            </div>
-            
-            <!-- Dynamic Data Visualization Section -->
-            <div class="visualization-section">
-              <div class="chart-grid">
+          <div class="admin-layout">
+            <aside id="analyticsPanel" class="panel analytics-panel collapsed">
+              <div class="panel-header">
+                <h2>Analytics</h2>
+                <button id="collapseAnalyticsButton" class="icon-button" title="Close analytics">×</button>
+              </div>
+              <div class="chart-grid analytics-grid">
                 <div class="chart-card">
                   <h3>Booking Status Distribution</h3>
                   <div class="canvas-wrapper">
                     <canvas id="bookingsChart" width="320" height="220"></canvas>
+                  </div>
+                  <div class="download-actions">
+                    <button data-download-chart="bookings" data-download-format="pdf">Download PDF</button>
+                    <button data-download-chart="bookings" data-download-format="excel">Download Excel</button>
                   </div>
                 </div>
                 <div class="chart-card">
@@ -67,25 +70,77 @@
                   <div class="canvas-wrapper">
                     <canvas id="usersChart" width="320" height="220"></canvas>
                   </div>
+                  <div class="download-actions">
+                    <button data-download-chart="users" data-download-format="pdf">Download PDF</button>
+                    <button data-download-chart="users" data-download-format="excel">Download Excel</button>
+                  </div>
                 </div>
                 <div class="chart-card wide">
                   <h3>Staff Performance & Earnings (INR)</h3>
                   <div class="canvas-wrapper">
                     <canvas id="performanceChart" width="660" height="240"></canvas>
                   </div>
+                  <div class="download-actions">
+                    <button data-download-chart="performance" data-download-format="pdf">Download PDF</button>
+                    <button data-download-chart="performance" data-download-format="excel">Download Excel</button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </aside>
 
-            <div id="adminOverview" class="admin-grid"></div>
-          </section>
-          <section class="panel">
-            <div class="panel-header">
-              <h2>Leave Requests</h2>
-              <button id="loadAdminLeaveRequestsButton" class="icon-button" title="Refresh leave requests">↻</button>
+            <div class="admin-main-content">
+              <section class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h2>Operations Overview</h2>
+                  </div>
+                  <div class="panel-actions">
+                    <button id="toggleAnalyticsButton" class="secondary">📊 Analytics</button>
+                    <button id="loadAdminButton" class="icon-button" title="Load overview">↻</button>
+                  </div>
+                </div>
+                <div id="adminOverview" class="admin-grid"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-header">
+                  <h2>Leave Requests</h2>
+                  <button id="loadAdminLeaveRequestsButton" class="icon-button" title="Refresh leave requests">↻</button>
+                </div>
+                <div id="adminLeaveRequestsContainer"></div>
+              </section>
+              <section class="panel">
+                <div class="panel-header">
+                  <h2>Register User</h2>
+                </div>
+                <div class="register-tab-group">
+                  <button id="registerWorkerTab" class="secondary active">Register Worker</button>
+                  <button id="registerAdminTab" class="secondary">Register Admin</button>
+                </div>
+                <div id="registerWorkerForm" class="register-form">
+                  <div class="field-grid">
+                    <label>Name<input id="registerWorkerName" /></label>
+                    <label>Email<input id="registerWorkerEmail" type="email" /></label>
+                    <label>Password<input id="registerWorkerPassword" type="password" /></label>
+                    <label>Phone<input id="registerWorkerPhone" /></label>
+                    <label>Address<input id="registerWorkerAddress" /></label>
+                    <label>Skill<input id="registerWorkerSkill" /></label>
+                    <label>Coordinates<input id="registerWorkerCoords" /></label>
+                  </div>
+                  <button id="registerWorkerButton" class="primary w-full">Register</button>
+                </div>
+                <div id="registerAdminForm" class="register-form" style="display:none;">
+                  <div class="field-grid">
+                    <label>Name<input id="registerAdminName" /></label>
+                    <label>Email<input id="registerAdminEmail" type="email" /></label>
+                    <label>Password<input id="registerAdminPassword" type="password" /></label>
+                    <label>Phone<input id="registerAdminPhone" /></label>
+                    <label>Address<input id="registerAdminAddress" /></label>
+                  </div>
+                  <button id="registerAdminButton" class="primary w-full">Register</button>
+                </div>
+              </section>
             </div>
-            <div id="adminLeaveRequestsContainer"></div>
-          </section>
+          </div>
         </section>
       </main>
     </div>
@@ -116,6 +171,6 @@
       </div>
     </div>
 
-    <script src="/pages/admin/dashboard.js"></script>
+    <script type="module" src="/pages/admin/dashboard.js"></script>
   </body>
 </html>

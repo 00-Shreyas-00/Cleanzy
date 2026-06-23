@@ -507,6 +507,63 @@ button.danger:hover {
   margin: 20px 0;
 }
 
+.admin-layout {
+  display: flex;
+  gap: 20px;
+}
+
+.analytics-panel {
+  flex: 0 0 420px;
+  max-width: 420px;
+  transition: all 0.2s ease;
+}
+
+.analytics-panel.collapsed {
+  display: none;
+}
+
+.admin-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+button.secondary {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+button.secondary:hover {
+  background: #dbeafe;
+}
+
+.download-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.download-actions button {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.download-actions button:hover {
+  background: #f8fafc;
+}
+
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

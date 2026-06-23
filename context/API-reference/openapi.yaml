@@ -394,6 +394,293 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/bookings/my:
+    get:
+      tags: [Booking and Payment]
+      summary: Get authenticated customer's bookings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Customer bookings returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingListResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/worker/bookings:
+    get:
+      tags: [Booking and Payment]
+      summary: Get authenticated worker bookings
+      description: Returns upcoming and past bookings for the worker.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Worker bookings returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkerBookingsResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/worker/attendance/check-in:
+    post:
+      tags: [Booking and Payment]
+      summary: Record worker attendance check-in
+      description: Requires `Worker` role.
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Attendance check-in recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already checked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/worker/attendance/check-out:
+    post:
+      tags: [Booking and Payment]
+      summary: Record worker attendance check-out
+      description: Requires `Worker` role.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Attendance check-out recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: No open attendance session found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/worker/attendance:
+    get:
+      tags: [Booking and Payment]
+      summary: Get worker attendance history
+      description: Requires `Worker` role.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Attendance history returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceListResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/feedback:
+    post:
+      tags: [Booking and Payment]
+      summary: Submit booking feedback
+      description: Requires `User` role.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeedbackRequest"
+            example:
+              booking_id: 2205216f-cdf6-42d8-86f3-bd8fdfc89974
+              rating: 5
+              comments: Excellent cleaning service.
+      responses:
+        "201":
+          description: Feedback submitted and rating updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedbackResponse"
+        "400":
+          description: Missing fields or invalid rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Invalid booking state or duplicate feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/notifications:
+    get:
+      tags: [Booking and Payment]
+      summary: Get user notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/notifications/{notification_id}/read:
+    put:
+      tags: [Booking and Payment]
+      summary: Mark a notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/admin/overview:
+    get:
+      tags: [Booking and Payment]
+      summary: Get administrator overview metrics
+      description: Requires `Administrator` role.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin overview returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverviewResponse"
+        "401":
+          description: Missing token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid token or wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -894,4 +1181,249 @@ components:
             cutoff:
               type: string
               format: date-time
+
+    BookingListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            bookings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Booking'
+
+    WorkerBookingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            upcoming:
+              type: array
+              items:
+                $ref: '#/components/schemas/Booking'
+            past:
+              type: array
+              items:
+                $ref: '#/components/schemas/Booking'
+
+    AttendanceRecord:
+      type: object
+      properties:
+        attendance_id:
+          type: string
+          format: uuid
+        staff_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        check_in:
+          type: string
+          format: date-time
+        check_out:
+          type: string
+          format: date-time
+          nullable: true
+
+    AttendanceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            attendance:
+              $ref: '#/components/schemas/AttendanceRecord'
+
+    AttendanceListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            attendance:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttendanceRecord'
+
+    Feedback:
+      type: object
+      properties:
+        feedback_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        client_id:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+        comments:
+          type: string
+
+    FeedbackRequest:
+      type: object
+      required: [booking_id, rating]
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comments:
+          type: string
+
+    FeedbackResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            feedback:
+              $ref: '#/components/schemas/Feedback'
+            staff:
+              $ref: '#/components/schemas/Staff'
+
+    Notification:
+      type: object
+      properties:
+        notification_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        message:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+        is_read:
+          type: boolean
+
+    NotificationListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            notifications:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notification'
+
+    NotificationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            notification:
+              $ref: '#/components/schemas/Notification'
+
+    AdminOverviewResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            booking_counts:
+              type: array
+              items:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  count:
+                    type: integer
+            users_by_role:
+              type: array
+              items:
+                type: object
+                properties:
+                  role:
+                    type: string
+                  count:
+                    type: integer
+            attendance_count:
+              type: integer
+            staff_performance:
+              type: array
+              items:
+                type: object
+                properties:
+                  staff_id:
+                    type: string
+                    format: uuid
+                  worker:
+                    $ref: '#/components/schemas/UserPublic'
+                  skill_type:
+                    type: string
+                  rating:
+                    type: number
+                  availability:
+                    type: boolean
+                  total_bookings:
+                    type: integer
+                  confirmed_bookings:
+                    type: integer
+                  feedback_count:
+                    type: integer
+                  attendance_days:
+                    type: integer
+                  salary_preview:
+                    type: object
+                    properties:
+                      currency:
+                        type: string
+                      daily_rate:
+                        type: number
+                      booking_bonus:
+                        type: number
+                      estimated_amount:
+                        type: number
+                      authorized_booking_amount:
+                        type: number
+            recent_bookings:
+              type: array
+              items:
+                $ref: '#/components/schemas/Booking'
+            holiday_requests:
+              type: array
+              items:
+                type: object
+            complaints:
+              type: array
+              items:
+                type: object
 

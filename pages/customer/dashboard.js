@@ -75,6 +75,12 @@ const renderEmpty = (target, text) => {
   }
 };
 
+const clearNotifications = async (userId) => {
+  console.log(`clearNotifications(${userId})`);
+  const target = $('notificationsList');
+  if (target) renderEmpty(target, 'No notifications.');
+};
+
 const loadServices = async () => {
   const data = await api('/api/services');
   state.services = data.data.services;
@@ -133,11 +139,14 @@ const loadMyBookings = async () => {
   const data = await api('/api/bookings/my');
   state.bookings = data.data.bookings || [];
   const target = $('myBookingsList');
+  const toggleRow = $('myBookingsToggleRow');
   if (!state.bookings.length) {
     renderEmpty(target, 'No customer bookings yet.');
+    if (toggleRow) toggleRow.innerHTML = '';
     return;
   }
-  target.innerHTML = state.bookings
+
+  const renderList = (bookings) => bookings
     .map(
       (booking) => `
       <article class="result-card">
@@ -169,6 +178,63 @@ const loadMyBookings = async () => {
       </article>`
     )
     .join('');
+
+  const recent = state.bookings.slice(0, 3);
+  target.innerHTML = renderList(recent);
+  if (toggleRow) {
+    toggleRow.innerHTML = `<button id="toggleBookingsList" class="secondary">View All Bookings</button>`;
+  }
+};
+
+const showAllBookings = () => {
+  const target = $('myBookingsList');
+  const toggleRow = $('myBookingsToggleRow');
+  if (!target || !toggleRow) return;
+  if (toggleRow.dataset.expanded === 'true') {
+    state.bookings = state.bookings || [];
+    target.innerHTML = state.bookings.slice(0, 3)
+      .map(
+        (booking) => `
+        <article class="result-card">
+          <h3>${booking.service.service_name}</h3>
+          <div class="metric-row">
+            <span class="${tagClass(booking.status)}">${booking.status}</span>
+            <span class="tag">${money(booking.service.base_price)}</span>
+          </div>
+          <p>${booking.staff.user.name} · ${new Date(booking.scheduled_time).toLocaleString()}</p>
+          <p>${booking.location}</p>
+        </article>`
+      )
+      .join('');
+    toggleRow.innerHTML = `<button id="toggleBookingsList" class="secondary">View All Bookings</button>`;
+    toggleRow.dataset.expanded = 'false';
+  } else {
+    target.innerHTML = `
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr><th>Service</th><th>Status</th><th>Amount</th><th>Worker</th><th>Date</th><th>Address</th></tr>
+          </thead>
+          <tbody>
+            ${state.bookings
+              .map(
+                (booking) => `
+              <tr>
+                <td>${booking.service.service_name}</td>
+                <td>${booking.status}</td>
+                <td>${money(booking.service.base_price)}</td>
+                <td>${booking.staff.user.name}</td>
+                <td>${new Date(booking.scheduled_time).toLocaleString()}</td>
+                <td>${booking.location}</td>
+              </tr>`
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>`;
+    toggleRow.innerHTML = `<button id="toggleBookingsList" class="secondary">Show Less</button>`;
+    toggleRow.dataset.expanded = 'true';
+  }
 };
 
 const initiateRazorpayPayment = (bookingId, amount) => {
@@ -305,6 +371,10 @@ const wireEvents = () => {
   $('searchButton').addEventListener('click', () => searchWorkers().catch((error) => showMessage(error.message, true)));
   $('loadMyBookingsButton').addEventListener('click', () => loadMyBookings().catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
+  $('clearNotificationsButton').addEventListener('click', async () => {
+    await api('/api/notifications/clear', { method: 'POST', body: { user_id: state.user.user_id } }).catch(() => {});
+    await clearNotifications(state.user.user_id);
+  });
 
   $('closePaymentModal').addEventListener('click', closePaymentModal);
   $('cancelPaymentModal').addEventListener('click', closePaymentModal);
@@ -319,10 +389,12 @@ const wireEvents = () => {
     const feedbackId = event.target.dataset.feedback;
     const readId = event.target.dataset.read;
     const payNowId = event.target.dataset.payNow;
+    const toggleBookings = event.target.id === 'toggleBookingsList';
     if (bookId) bookWorker(bookId).catch((error) => showMessage(error.message, true));
     if (feedbackId) submitFeedback(feedbackId).catch((error) => showMessage(error.message, true));
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
     if (payNowId) openPaymentModal(payNowId);
+    if (toggleBookings) showAllBookings();
   });
 };
 

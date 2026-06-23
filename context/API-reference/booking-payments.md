@@ -73,7 +73,46 @@ Active booking statuses:
 }
 ```
 
+## `GET /api/bookings/my`
+
+Returns the authenticated customer's bookings, ordered by scheduled time.
+
+### Authentication
+
+Bearer JWT required.
+
+Required role:
+
+- `User`
+
+### Response `200`
+
+```json
+{
+  "success": true,
+  "data": {
+    "bookings": [
+      {
+        "booking_id": "2205216f-cdf6-42d8-86f3-bd8fdfc89974",
+        "client_id": "9f0c8fa3-3cbf-4569-b2ef-75524fa53b41",
+        "staff_id": "5d0c49e7-bd9d-4bd5-9099-d0086a5b8a97",
+        "service_id": "14b4fb12-c31b-4976-b29f-e0672d7be442",
+        "scheduled_time": "2031-02-20T09:30:00.000Z",
+        "status": "Confirmed",
+        "location": "Client Address"
+      }
+    ]
+  }
+}
+```
+
 ### Errors
+
+Missing token: `401`
+
+Wrong role: `403`
+
+## `POST /api/payments/webhook`
 
 Missing fields: `400`
 

@@ -78,6 +78,14 @@ const renderEmpty = (target, text) => {
   }
 };
 
+const clearNotifications = async (userId) => {
+  console.log(`clearNotifications(${userId})`);
+  const target = $('notificationsList');
+  if (target) {
+    renderEmpty(target, 'No notifications.');
+  }
+};
+
 const updateBookingCardStatus = (bookingId, status) => {
   state.jobStatusByBookingId = state.jobStatusByBookingId || {};
   state.jobStatusByBookingId[bookingId] = status;
@@ -240,20 +248,58 @@ const renderEarnings = () => {
 const loadAttendance = async () => {
   const data = await api('/api/worker/attendance');
   const target = $('attendanceList');
-  if (!data.data.attendance.length) {
+  const historyContainer = $('attendanceHistoryContainer');
+  state.attendanceHistory = data.data.attendance || [];
+  const today = state.attendanceHistory.find((item) => item.date === new Date().toISOString().slice(0, 10));
+  if (!state.attendanceHistory.length) {
     renderEmpty(target, 'No attendance records.');
+    if (historyContainer) historyContainer.innerHTML = '';
     return;
   }
-  target.innerHTML = data.data.attendance
-    .map(
-      (item) => `
-      <article class="result-card">
-        <h3>${new Date(item.date).toLocaleDateString()}</h3>
-        <p>In: ${new Date(item.check_in).toLocaleString()}</p>
-        <p>Out: ${item.check_out ? new Date(item.check_out).toLocaleString() : 'Open'}</p>
-      </article>`
-    )
-    .join('');
+  const todayItem = today || state.attendanceHistory[0];
+  target.innerHTML = `
+    <article class="result-card">
+      <h3>${new Date(todayItem.date).toLocaleDateString()}</h3>
+      <p>In: ${new Date(todayItem.check_in).toLocaleString()}</p>
+      <p>Out: ${todayItem.check_out ? new Date(todayItem.check_out).toLocaleString() : 'Open'}</p>
+    </article>`;
+  if (historyContainer) {
+    historyContainer.innerHTML = `
+      <button id="toggleAttendanceHistory" class="secondary">View History</button>
+      <div id="attendanceHistoryTable" class="result-list" style="display:none;"></div>`;
+  }
+};
+
+const showAttendanceHistory = () => {
+  const container = $('attendanceHistoryTable');
+  const toggle = $('toggleAttendanceHistory');
+  if (!container || !toggle) return;
+  if (container.style.display === 'none' || container.style.display === '') {
+    const rows = state.attendanceHistory
+      .map(
+        (item) => `
+        <tr>
+          <td>${new Date(item.date).toLocaleDateString()}</td>
+          <td>${new Date(item.check_in).toLocaleTimeString()}</td>
+          <td>${item.check_out ? new Date(item.check_out).toLocaleTimeString() : 'Open'}</td>
+        </tr>`
+      )
+      .join('');
+    container.innerHTML = `
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr><th>Date</th><th>Check-In</th><th>Check-Out</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    container.style.display = 'block';
+    toggle.textContent = 'Hide History';
+  } else {
+    container.style.display = 'none';
+    toggle.textContent = 'View History';
+  }
 };
 
 const attendanceAction = async (kind) => {
@@ -333,6 +379,10 @@ const wireEvents = () => {
   $('loadLeaveRequestsButton').addEventListener('click', () => renderLeaveRequests());
   $('loadAttendanceButton').addEventListener('click', () => loadAttendance().catch((error) => showMessage(error.message, true)));
   $('loadEarningsButton').addEventListener('click', () => loadWorkerBookings().catch((error) => showMessage(error.message, true)));
+  $('clearNotificationsButton').addEventListener('click', async () => {
+    await api('/api/notifications/clear', { method: 'POST', body: { user_id: state.user.user_id } }).catch(() => {});
+    await clearNotifications(state.user.user_id);
+  });
   $('requestLeaveButton').addEventListener('click', () => {
     $('leaveModal').classList.add('active');
   });
@@ -357,14 +407,20 @@ const wireEvents = () => {
   $('checkInButton').addEventListener('click', () => attendanceAction('check-in').catch((error) => showMessage(error.message, true)));
   $('checkOutButton').addEventListener('click', () => attendanceAction('check-out').catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
+  document.body.addEventListener('click', (event) => {
+    const toggleHistory = event.target.id === 'toggleAttendanceHistory';
+    if (toggleHistory) showAttendanceHistory();
+  });
 
   document.body.addEventListener('click', (event) => {
     const readId = event.target.dataset.read;
     const action = event.target.dataset.action;
     const bookingId = event.target.dataset.bookingId;
+    const toggleHistoryBtn = event.target.id === 'toggleAttendanceHistory';
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
     if (action === 'accept' && bookingId) acceptJob(bookingId).catch((error) => showMessage(error.message, true));
     if (action === 'decline' && bookingId) declineJob(bookingId).catch((error) => showMessage(error.message, true));
+    if (toggleHistoryBtn) showAttendanceHistory();
   });
 };
 

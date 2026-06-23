@@ -46,8 +46,32 @@ Integration tests use isolated ports, but the API paths are the same.
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `POST` | `/api/bookings/commit` | Bearer JWT, `User` role | Commit a selected service/staff/schedule into a `Payment_Required` booking and create a payment intent. |
+| `GET` | `/api/bookings/my` | Bearer JWT, `User` role | Return the authenticated customer's booking history and current bookings. |
 | `POST` | `/api/payments/webhook` | HMAC gateway signature | Process gateway authorization callbacks and confirm bookings. |
 | `POST` | `/api/bookings/cleanup-pending` | Bearer JWT, `Administrator` role | Cancel stale pending/payment-required bookings. |
+
+### Worker Portal and Attendance
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/worker/bookings` | Bearer JWT, `Worker` role | Return upcoming and past bookings for the authenticated worker. |
+| `POST` | `/api/worker/attendance/check-in` | Bearer JWT, `Worker` role | Record worker attendance check-in for the current day. |
+| `POST` | `/api/worker/attendance/check-out` | Bearer JWT, `Worker` role | Record worker attendance check-out for the current open attendance session. |
+| `GET` | `/api/worker/attendance` | Bearer JWT, `Worker` role | Fetch the authenticated worker's attendance history. |
+
+### Feedback and Notifications
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/api/feedback` | Bearer JWT, `User` role | Submit feedback for a confirmed booking and update worker rating. |
+| `GET` | `/api/notifications` | Bearer JWT | Fetch recent notifications for the authenticated user. |
+| `PUT` | `/api/notifications/:notification_id/read` | Bearer JWT | Mark a specific notification as read. |
+
+### Administration
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/admin/overview` | Bearer JWT, `Administrator` role | Return admin dashboard metrics and staff performance summaries. |
 
 ## Documentation Files
 

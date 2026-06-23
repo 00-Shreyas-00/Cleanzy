@@ -1,6 +1,8 @@
 const state = {
   token: localStorage.getItem('cleanzy_token') || '',
   user: JSON.parse(localStorage.getItem('cleanzy_user') || 'null'),
+  chartsRendered: false,
+  adminOverviewData: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -56,6 +58,28 @@ const renderEmpty = (target, text) => {
   if (target) {
     target.innerHTML = `<div class="result-card"><p>${text}</p></div>`;
   }
+};
+
+const clearNotifications = async (userId) => {
+  console.log(`clearNotifications(${userId})`);
+  clearNotificationsLocal();
+};
+
+const clearNotificationsLocal = () => {
+  const target = $('notificationsList');
+  if (target) {
+    renderEmpty(target, 'No notifications.');
+  }
+};
+
+const registerWorker = async (data) => {
+  console.log('registerWorker', data);
+  showMessage('Worker registration stub called.');
+};
+
+const registerAdmin = async (data) => {
+  console.log('registerAdmin', data);
+  showMessage('Admin registration stub called.');
 };
 
 const getSharedLeaveRequests = () => {
@@ -364,14 +388,74 @@ const rejectLeave = async (requestId) => {
   showMessage('Leave request rejected locally.');
 };
 
+const renderAnalyticsCharts = () => {
+  if (!state.adminOverviewData) return;
+  drawBookingsChart(state.adminOverviewData.booking_counts || []);
+  drawUsersChart(state.adminOverviewData.users_by_role || []);
+  drawPerformanceChart(state.adminOverviewData.staff_performance || []);
+};
+
+const openAnalyticsPanel = () => {
+  const panel = $('analyticsPanel');
+  if (!panel) return;
+  panel.classList.remove('collapsed');
+  if (!state.chartsRendered) {
+    renderAnalyticsCharts();
+    state.chartsRendered = true;
+  }
+};
+
+const closeAnalyticsPanel = () => {
+  const panel = $('analyticsPanel');
+  if (!panel) return;
+  panel.classList.add('collapsed');
+};
+
+const downloadChartPdf = (chartKey) => {
+  const chartCard = document.querySelector(`[data-download-chart="${chartKey}"]`)?.closest('.chart-card');
+  if (!chartCard) return;
+  const newWindow = window.open('', '_blank');
+  if (!newWindow) return;
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map((node) => node.outerHTML).join('');
+  newWindow.document.write(`<!doctype html><html><head><title>${chartKey} chart</title>${styles}</head><body>${chartCard.outerHTML}</body></html>`);
+  newWindow.document.close();
+  newWindow.focus();
+  setTimeout(() => {
+    newWindow.print();
+  }, 250);
+};
+
+const exportChartExcel = async (chartKey) => {
+  if (!state.adminOverviewData) return;
+  const module = await import('https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs');
+  const XLSX = module.default || module;
+  let data = [];
+  if (chartKey === 'bookings') {
+    data = (state.adminOverviewData.booking_counts || []).map((item) => ({ Status: item.status, Count: item.count }));
+  } else if (chartKey === 'users') {
+    data = (state.adminOverviewData.users_by_role || []).map((item) => ({ Role: item.role, Count: item.count }));
+  } else if (chartKey === 'performance') {
+    data = (state.adminOverviewData.staff_performance || []).map((item) => ({
+      'Worker Name': item.worker?.name || '',
+      Skill: item.skill_type || '',
+      Rating: item.rating || 0,
+      'Confirmed Bookings': item.confirmed_bookings || 0,
+      'Attendance Days': item.attendance_days || 0,
+      'Estimated Earnings': item.salary_preview?.estimated_amount || 0,
+      'Recent Status': item.last_job_status || item.most_recent_job_response || item.last_response || 'Pending',
+    }));
+  }
+  if (!data.length) return;
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+  XLSX.writeFile(workbook, `${chartKey}-data.xlsx`);
+};
+
 const loadAdminOverview = async () => {
   const data = await api('/api/admin/overview');
   const overview = data.data;
-
-  // Render HTML5 Canvas-based charts
-  drawBookingsChart(overview.booking_counts || []);
-  drawUsersChart(overview.users_by_role || []);
-  drawPerformanceChart(overview.staff_performance || []);
+  state.adminOverviewData = overview;
 
   const bookingMetrics = overview.booking_counts
     .map((item) => `<span class="tag">${item.status}: ${item.count}</span>`)
@@ -531,7 +615,13 @@ const wireEvents = () => {
 
   $('loadAdminButton').addEventListener('click', () => loadAdminOverview().catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
+  $('clearNotificationsButton').addEventListener('click', async () => {
+    await api('/api/notifications/clear', { method: 'POST', body: { user_id: state.user.user_id } }).catch(() => {});
+    await clearNotifications(state.user.user_id);
+  });
   $('loadAdminLeaveRequestsButton').addEventListener('click', () => loadAdminLeaveRequests().catch((error) => showMessage(error.message, true)));
+  $('toggleAnalyticsButton').addEventListener('click', openAnalyticsPanel);
+  $('collapseAnalyticsButton').addEventListener('click', closeAnalyticsPanel);
 
   $('closePayWorkerModal').addEventListener('click', closePayWorkerModal);
   $('cancelPayWorkerModal').addEventListener('click', closePayWorkerModal);
@@ -546,6 +636,8 @@ const wireEvents = () => {
     const payWorkerId = event.target.dataset.payWorker;
     const approveId = event.target.dataset.approveLeave;
     const rejectId = event.target.dataset.rejectLeave;
+    const downloadChart = event.target.dataset.downloadChart;
+    const downloadFormat = event.target.dataset.downloadFormat;
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
     if (payWorkerId) {
       const name = event.target.dataset.workerName;
@@ -554,6 +646,43 @@ const wireEvents = () => {
     }
     if (approveId) approveLeave(approveId).catch((error) => showMessage(error.message, true));
     if (rejectId) rejectLeave(rejectId).catch((error) => showMessage(error.message, true));
+    if (downloadChart && downloadFormat === 'pdf') downloadChartPdf(downloadChart);
+    if (downloadChart && downloadFormat === 'excel') exportChartExcel(downloadChart).catch((error) => showMessage(error.message, true));
+  });
+
+  $('registerWorkerTab').addEventListener('click', () => {
+    $('registerWorkerTab').classList.add('active');
+    $('registerAdminTab').classList.remove('active');
+    $('registerWorkerForm').style.display = 'block';
+    $('registerAdminForm').style.display = 'none';
+  });
+  $('registerAdminTab').addEventListener('click', () => {
+    $('registerAdminTab').classList.add('active');
+    $('registerWorkerTab').classList.remove('active');
+    $('registerWorkerForm').style.display = 'none';
+    $('registerAdminForm').style.display = 'block';
+  });
+  $('registerWorkerButton').addEventListener('click', async () => {
+    const data = {
+      name: $('registerWorkerName').value,
+      email: $('registerWorkerEmail').value,
+      password: $('registerWorkerPassword').value,
+      phone: $('registerWorkerPhone').value,
+      address: $('registerWorkerAddress').value,
+      skill_type: $('registerWorkerSkill').value,
+      location_coords: $('registerWorkerCoords').value,
+    };
+    await registerWorker(data);
+  });
+  $('registerAdminButton').addEventListener('click', async () => {
+    const data = {
+      name: $('registerAdminName').value,
+      email: $('registerAdminEmail').value,
+      password: $('registerAdminPassword').value,
+      phone: $('registerAdminPhone').value,
+      address: $('registerAdminAddress').value,
+    };
+    await registerAdmin(data);
   });
 };
 
