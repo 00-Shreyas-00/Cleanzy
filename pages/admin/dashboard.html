@@ -52,7 +52,10 @@
             <aside id="analyticsPanel" class="panel analytics-panel collapsed">
               <div class="panel-header">
                 <h2>Analytics</h2>
-                <button id="collapseAnalyticsButton" class="icon-button" title="Close analytics">×</button>
+                <div class="panel-header-actions">
+                  <button id="backToOverviewButton" class="secondary">← Back to Overview</button>
+                  <button id="collapseAnalyticsButton" class="icon-button" title="Close analytics">×</button>
+                </div>
               </div>
               <div class="chart-grid analytics-grid">
                 <div class="chart-card">
@@ -144,6 +147,8 @@
         </section>
       </main>
     </div>
+
+    <div id="chartTooltip" class="chart-tooltip" hidden></div>
 
     <!-- Pay Worker Modal -->
     <div id="payWorkerModal" class="modal-overlay">

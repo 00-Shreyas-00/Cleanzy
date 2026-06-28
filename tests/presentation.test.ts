@@ -152,5 +152,14 @@ describe('Cleanzy Presentation & Frontend Integration Tests', () => {
     expect(html).not.toContain('id="serviceSelect"');
     expect(html).not.toContain('id="checkInButton"');
   });
+
+  it('should expose the analytics back action and chart tooltip container in the admin dashboard', async () => {
+    const res = await request('GET', '/admin/dashboard', makeCookie('Administrator'));
+    expect(res.status).toBe(200);
+    const html = res.data;
+
+    expect(html).toContain('id="backToOverviewButton"');
+    expect(html).toContain('id="chartTooltip"');
+  });
 });
 

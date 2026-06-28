@@ -220,6 +220,12 @@ main {
   margin-bottom: 14px;
 }
 
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .panel h2 {
   font-size: 16px;
 }
@@ -513,6 +519,9 @@ button.danger:hover {
 }
 
 .analytics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex: 0 0 420px;
   max-width: 420px;
   transition: all 0.2s ease;
@@ -527,6 +536,30 @@ button.danger:hover {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+#adminView.analytics-active .admin-layout {
+  display: block;
+}
+
+#adminView.analytics-active .admin-main-content {
+  display: none;
+}
+
+#adminView.analytics-active .analytics-panel {
+  display: flex;
+  flex: 1 1 auto;
+  max-width: none;
+  width: 100%;
+  min-height: calc(100vh - 160px);
+}
+
+#adminView.analytics-active .analytics-panel .chart-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+}
+
+#adminView.analytics-active .analytics-panel .chart-card.wide {
+  grid-column: 1 / -1;
 }
 
 .panel-actions {
@@ -572,10 +605,26 @@ button.secondary:hover {
 
 .chart-card {
   background: #ffffff;
-  border: 1px solid var(--line);
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 8px 24px rgba(21, 37, 43, 0.04);
+}
+
+.chart-tooltip {
+  position: fixed;
+  z-index: 1200;
+  min-width: 120px;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+  transform: translate(12px, -50%);
 }
 
 .chart-card h3 {

@@ -3,6 +3,7 @@ const state = {
   user: JSON.parse(localStorage.getItem('cleanzy_user') || 'null'),
   chartsRendered: false,
   adminOverviewData: null,
+  analyticsActive: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -114,6 +115,54 @@ const jobStatusClass = (status) => {
 };
 
 /* --- Data Visualizations via Canvas --- */
+const showChartTooltip = (event, canvas, items, type) => {
+  const tooltip = $('chartTooltip');
+  if (!tooltip || !canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  let content = '';
+  if (type === 'bar') {
+    const match = items.find((item) => x >= item.x && x <= item.x + item.width && y >= item.y && y <= item.y + item.height);
+    if (!match) {
+      tooltip.hidden = true;
+      return;
+    }
+    content = `<strong>${match.label}</strong><br>${match.value}`;
+  } else if (type === 'donut') {
+    const match = items.find((item) => {
+      const dx = x - item.cx;
+      const dy = y - item.cy;
+      const distance = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+      const normalized = angle < 0 ? angle + Math.PI * 2 : angle;
+      const start = item.startAngle;
+      const end = item.endAngle;
+      const inSweep = end > start ? normalized >= start && normalized <= end : normalized >= start || normalized <= end;
+      return inSweep && distance >= item.innerRadius && distance <= item.radius;
+    });
+    if (!match) {
+      tooltip.hidden = true;
+      return;
+    }
+    content = `<strong>${match.label}</strong><br>${match.count} users (${match.percentage}%)`;
+  }
+
+  tooltip.innerHTML = content;
+  tooltip.hidden = false;
+  tooltip.style.left = `${event.clientX + 14}px`;
+  tooltip.style.top = `${event.clientY}px`;
+};
+
+const hideChartTooltip = () => {
+  const tooltip = $('chartTooltip');
+  if (tooltip) {
+    tooltip.hidden = true;
+  }
+};
+
 const drawBookingsChart = (counts) => {
   const canvas = $('bookingsChart');
   if (!canvas) return;
@@ -142,6 +191,7 @@ const drawBookingsChart = (counts) => {
     ctx.stroke();
   }
 
+  const tooltipItems = [];
   statuses.forEach((status, index) => {
     const val = data[index];
     const y = padding + index * (barHeight + gap);
@@ -177,7 +227,22 @@ const drawBookingsChart = (counts) => {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(val.toString(), padding + 85 + barWidth, y + barHeight / 2 + 4);
+
+    tooltipItems.push({
+      x: padding + 80,
+      y,
+      width: barWidth,
+      height: barHeight,
+      label: status,
+      value: val,
+    });
   });
+
+  canvas.dataset.tooltipType = 'bar';
+  canvas.dataset.tooltipItems = JSON.stringify(tooltipItems);
+  canvas.style.cursor = 'pointer';
+  canvas.onmousemove = (event) => showChartTooltip(event, canvas, tooltipItems, 'bar');
+  canvas.onmouseleave = hideChartTooltip;
 };
 
 const drawUsersChart = (roles) => {
@@ -200,6 +265,7 @@ const drawUsersChart = (roles) => {
     Administrator: '#f59e0b',
   };
 
+  const tooltipItems = [];
   roles.forEach((item) => {
     const sliceAngle = (item.count / total) * Math.PI * 2;
     if (sliceAngle === 0) return;
@@ -215,6 +281,20 @@ const drawUsersChart = (roles) => {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    const itemStartAngle = startAngle;
+    const itemEndAngle = startAngle + sliceAngle;
+    tooltipItems.push({
+      cx,
+      cy,
+      radius,
+      innerRadius,
+      startAngle: itemStartAngle,
+      endAngle: itemEndAngle,
+      label: item.role,
+      count: item.count,
+      percentage: ((item.count / total) * 100).toFixed(1),
+    });
 
     startAngle += sliceAngle;
   });
@@ -247,6 +327,12 @@ const drawUsersChart = (roles) => {
     ctx.fillStyle = '#64748b';
     ctx.fillText(`${item.count} total`, x + 12, y + 8);
   });
+
+  canvas.dataset.tooltipType = 'donut';
+  canvas.dataset.tooltipItems = JSON.stringify(tooltipItems);
+  canvas.style.cursor = 'pointer';
+  canvas.onmousemove = (event) => showChartTooltip(event, canvas, tooltipItems, 'donut');
+  canvas.onmouseleave = hideChartTooltip;
 };
 
 const drawPerformanceChart = (staff) => {
@@ -286,6 +372,7 @@ const drawPerformanceChart = (staff) => {
     ctx.stroke();
   }
 
+  const tooltipItems = [];
   staff.forEach((item, index) => {
     const x = paddingLeft + index * (barWidth + gap) + gap / 2;
     const barHeight = (chartHeight * item.salary_preview.estimated_amount) / maxEarnings;
@@ -315,7 +402,22 @@ const drawPerformanceChart = (staff) => {
     ctx.fillStyle = '#b7791f';
     ctx.font = 'bold 9px sans-serif';
     ctx.fillText(`★${item.rating.toFixed(1)}`, x + barWidth / 2, canvas.height - paddingBottom + 27);
+
+    tooltipItems.push({
+      x,
+      y,
+      width: barWidth,
+      height: barHeight,
+      label: item.worker.name,
+      value: `₹${item.salary_preview.estimated_amount.toFixed(0)}`,
+    });
   });
+
+  canvas.dataset.tooltipType = 'bar';
+  canvas.dataset.tooltipItems = JSON.stringify(tooltipItems);
+  canvas.style.cursor = 'pointer';
+  canvas.onmousemove = (event) => showChartTooltip(event, canvas, tooltipItems, 'bar');
+  canvas.onmouseleave = hideChartTooltip;
 };
 
 const loadAdminLeaveRequests = async () => {
@@ -397,8 +499,11 @@ const renderAnalyticsCharts = () => {
 
 const openAnalyticsPanel = () => {
   const panel = $('analyticsPanel');
-  if (!panel) return;
+  const adminView = $('adminView');
+  if (!panel || !adminView) return;
   panel.classList.remove('collapsed');
+  adminView.classList.add('analytics-active');
+  state.analyticsActive = true;
   if (!state.chartsRendered) {
     renderAnalyticsCharts();
     state.chartsRendered = true;
@@ -407,8 +512,12 @@ const openAnalyticsPanel = () => {
 
 const closeAnalyticsPanel = () => {
   const panel = $('analyticsPanel');
-  if (!panel) return;
+  const adminView = $('adminView');
+  if (!panel || !adminView) return;
   panel.classList.add('collapsed');
+  adminView.classList.remove('analytics-active');
+  state.analyticsActive = false;
+  hideChartTooltip();
 };
 
 const downloadChartPdf = (chartKey) => {
@@ -621,6 +730,7 @@ const wireEvents = () => {
   });
   $('loadAdminLeaveRequestsButton').addEventListener('click', () => loadAdminLeaveRequests().catch((error) => showMessage(error.message, true)));
   $('toggleAnalyticsButton').addEventListener('click', openAnalyticsPanel);
+  $('backToOverviewButton').addEventListener('click', closeAnalyticsPanel);
   $('collapseAnalyticsButton').addEventListener('click', closeAnalyticsPanel);
 
   $('closePayWorkerModal').addEventListener('click', closePayWorkerModal);
