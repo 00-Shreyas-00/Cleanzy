@@ -61,6 +61,64 @@ const renderEmpty = (target, text) => {
   }
 };
 
+const renderStaffPerformanceCard = (staff, isHidden = false) => {
+  const recentStatus = staff.last_job_status || staff.most_recent_job_response || staff.last_response || 'Pending';
+  const hiddenStyle = isHidden ? ' style="display:none;"' : '';
+  return `
+    <article class="result-card staff-performance-card"${hiddenStyle}>
+      <div class="metric-row" style="justify-content: space-between; gap: 10px; align-items: flex-start;">
+        <div>
+          <h3>${staff.worker.name}</h3>
+          <p>${staff.skill_type} · ${staff.rating.toFixed(1)} rating</p>
+        </div>
+        <span class="${jobStatusClass(recentStatus)}">${recentStatus}</span>
+      </div>
+      <div class="metric-row">
+        <span class="tag">${staff.confirmed_bookings} confirmed</span>
+        <span class="tag">${staff.attendance_days} attendance</span>
+        <span class="tag">${money(staff.salary_preview.estimated_amount)}</span>
+      </div>
+      <button class="primary w-full pay-worker-btn" style="margin-top: 8px;" data-pay-worker="${staff.worker.user_id}" data-worker-name="${staff.worker.name}" data-amount="${staff.salary_preview.estimated_amount}">Pay Worker</button>
+    </article>`;
+};
+
+const toggleStaffPerformanceCards = () => {
+  const button = $('toggleStaffPerformanceButton');
+  const cards = Array.from(document.querySelectorAll('.staff-performance-card'));
+  if (!button || !cards.length) return;
+
+  const shouldExpand = button.dataset.expanded !== 'true';
+  cards.slice(3).forEach((card) => {
+    card.style.display = shouldExpand ? '' : 'none';
+  });
+  button.dataset.expanded = shouldExpand ? 'true' : 'false';
+  button.textContent = shouldExpand ? 'Show Less' : 'Show More';
+};
+
+const setupStaffPerformanceToggle = () => {
+  const button = $('toggleStaffPerformanceButton');
+  const cards = Array.from(document.querySelectorAll('.staff-performance-card'));
+  if (!button || !cards.length) return;
+
+  if (cards.length <= 3) {
+    button.style.display = 'none';
+    return;
+  }
+
+  button.style.display = '';
+  button.dataset.expanded = 'false';
+  button.textContent = 'Show More';
+  button.onclick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleStaffPerformanceCards();
+  };
+
+  cards.slice(3).forEach((card) => {
+    card.style.display = 'none';
+  });
+};
+
 const clearNotifications = async (userId) => {
   console.log(`clearNotifications(${userId})`);
   clearNotificationsLocal();
@@ -520,45 +578,181 @@ const closeAnalyticsPanel = () => {
   hideChartTooltip();
 };
 
-const downloadChartPdf = (chartKey) => {
-  const chartCard = document.querySelector(`[data-download-chart="${chartKey}"]`)?.closest('.chart-card');
-  if (!chartCard) return;
-  const newWindow = window.open('', '_blank');
-  if (!newWindow) return;
-  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map((node) => node.outerHTML).join('');
-  newWindow.document.write(`<!doctype html><html><head><title>${chartKey} chart</title>${styles}</head><body>${chartCard.outerHTML}</body></html>`);
-  newWindow.document.close();
-  newWindow.focus();
-  setTimeout(() => {
-    newWindow.print();
-  }, 250);
+const addPdfPageNumber = (doc, pageNumber, totalPages) => {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  doc.setFontSize(9);
+  doc.setTextColor(100);
+  doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
 };
 
-const exportChartExcel = async (chartKey) => {
+const downloadFullAnalyticsReportPdf = async () => {
   if (!state.adminOverviewData) return;
-  const module = await import('https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs');
-  const XLSX = module.default || module;
-  let data = [];
-  if (chartKey === 'bookings') {
-    data = (state.adminOverviewData.booking_counts || []).map((item) => ({ Status: item.status, Count: item.count }));
-  } else if (chartKey === 'users') {
-    data = (state.adminOverviewData.users_by_role || []).map((item) => ({ Role: item.role, Count: item.count }));
-  } else if (chartKey === 'performance') {
-    data = (state.adminOverviewData.staff_performance || []).map((item) => ({
-      'Worker Name': item.worker?.name || '',
-      Skill: item.skill_type || '',
-      Rating: item.rating || 0,
-      'Confirmed Bookings': item.confirmed_bookings || 0,
-      'Attendance Days': item.attendance_days || 0,
-      'Estimated Earnings': item.salary_preview?.estimated_amount || 0,
-      'Recent Status': item.last_job_status || item.most_recent_job_response || item.last_response || 'Pending',
-    }));
+
+  const button = $('downloadFullAnalyticsButton');
+  if (button) {
+    button.textContent = 'Generating PDF...';
+    button.disabled = true;
   }
-  if (!data.length) return;
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
-  XLSX.writeFile(workbook, `${chartKey}-data.xlsx`);
+
+  try {
+    openAnalyticsPanel();
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const generatedAt = new Date().toLocaleString();
+
+    doc.setFontSize(18);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Cleanzy — Analytics Report', margin, 18);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${generatedAt}`, margin, 26);
+
+    const summaryRows = [
+      ['Bookings Overview', 'Status counts', (state.adminOverviewData.booking_counts || []).map((item) => `${item.status}: ${item.count}`).join(', ')],
+      ['System Users', 'Role counts', (state.adminOverviewData.users_by_role || []).map((item) => `${item.role}: ${item.count}`).join(', ')],
+      ['Attendance Total', 'Records', state.adminOverviewData.attendance_count || 0],
+      ['Operational Support', 'Complaints / Holiday requests', `${state.adminOverviewData.complaints?.length || 0} complaints · ${state.adminOverviewData.holiday_requests?.length || 0} holiday requests`],
+    ];
+
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Statistics Summary', margin, 36);
+    doc.autoTable({
+      startY: 40,
+      head: [['Section', 'Metric', 'Value']],
+      body: summaryRows,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      margin: { left: margin, right: margin },
+    });
+
+    const staffRows = (state.adminOverviewData.staff_performance || []).map((item) => [
+      item.worker?.name || '',
+      item.skill_type || '',
+      (item.rating || 0).toFixed(1),
+      item.confirmed_bookings || 0,
+      item.attendance_days || 0,
+      `INR ${Number(item.salary_preview?.estimated_amount || 0).toFixed(2)}`,
+    ]);
+    const recentBookingRows = (state.adminOverviewData.recent_bookings || []).map((item) => [
+      item.service?.service_name || '',
+      item.status || '',
+      new Date(item.scheduled_time).toLocaleString(),
+    ]);
+
+    let y = doc.lastAutoTable.finalY + 8;
+    if (y > pageHeight - 80) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Staff Performance Details', margin, y);
+    doc.autoTable({
+      startY: y + 4,
+      head: [['Name', 'Skill', 'Rating', 'Confirmed jobs', 'Attendance count', 'Earnings (INR)']],
+      body: staffRows,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      margin: { left: margin, right: margin },
+    });
+
+    y = doc.lastAutoTable.finalY + 8;
+    if (y > pageHeight - 60) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text('Recent Booking Log', margin, y);
+    doc.autoTable({
+      startY: y + 4,
+      head: [['Service', 'Status', 'DateTime']],
+      body: recentBookingRows,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [15, 118, 110], textColor: 255 },
+      margin: { left: margin, right: margin },
+    });
+
+    addPdfPageNumber(doc, 1, 2);
+
+    doc.addPage();
+    let chartY = 18;
+    const chartElements = [
+      { title: 'Booking Status Distribution', element: $('bookingsChart') },
+      { title: 'Users by Role', element: $('usersChart') },
+      { title: 'Staff Performance & Earnings', element: $('performanceChart') },
+    ];
+
+    for (const chart of chartElements) {
+      if (chartY > pageHeight - 60) {
+        doc.addPage();
+        chartY = 18;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text(chart.title, margin, chartY);
+      chartY += 6;
+
+      if (!chart.element) {
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('Chart unavailable', margin, chartY + 10);
+        chartY += 24;
+        continue;
+      }
+
+      try {
+        const canvas = await window.html2canvas(chart.element, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          logging: false,
+          useCORS: true,
+        });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        const maxHeight = pageHeight - chartY - 20;
+        const scale = Math.min(1, maxHeight / imgHeight);
+        const finalWidth = imgWidth * scale;
+        const finalHeight = imgHeight * scale;
+
+        if (finalHeight > 0) {
+          doc.addImage(imgData, 'PNG', margin, chartY + 3, finalWidth, finalHeight);
+          chartY += finalHeight + 12;
+        } else {
+          doc.setFontSize(10);
+          doc.setTextColor(100);
+          doc.text('Chart unavailable', margin, chartY + 10);
+          chartY += 24;
+        }
+      } catch (error) {
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('Chart unavailable', margin, chartY + 10);
+        chartY += 24;
+      }
+    }
+
+    addPdfPageNumber(doc, 2, 2);
+    doc.save(`cleanzy-analytics-${Date.now()}.pdf`);
+  } finally {
+    if (button) {
+      button.textContent = 'Download Full Analytics Report (PDF)';
+      button.disabled = false;
+    }
+  }
 };
 
 const loadAdminOverview = async () => {
@@ -572,27 +766,9 @@ const loadAdminOverview = async () => {
   const roleMetrics = overview.users_by_role
     .map((item) => `<span class="tag">${item.role}: ${item.count}</span>`)
     .join('');
-  const staffCards = overview.staff_performance
-    .map((staff) => {
-      const recentStatus = staff.last_job_status || staff.most_recent_job_response || staff.last_response || 'Pending';
-      return `
-      <article class="result-card">
-        <div class="metric-row" style="justify-content: space-between; gap: 10px; align-items: flex-start;">
-          <div>
-            <h3>${staff.worker.name}</h3>
-            <p>${staff.skill_type} · ${staff.rating.toFixed(1)} rating</p>
-          </div>
-          <span class="${jobStatusClass(recentStatus)}">${recentStatus}</span>
-        </div>
-        <div class="metric-row">
-          <span class="tag">${staff.confirmed_bookings} confirmed</span>
-          <span class="tag">${staff.attendance_days} attendance</span>
-          <span class="tag">${money(staff.salary_preview.estimated_amount)}</span>
-        </div>
-        <button class="primary w-full pay-worker-btn" style="margin-top: 8px;" data-pay-worker="${staff.worker.user_id}" data-worker-name="${staff.worker.name}" data-amount="${staff.salary_preview.estimated_amount}">Pay Worker</button>
-      </article>`;
-    })
-    .join('');
+  const visibleStaffCards = (overview.staff_performance || []).slice(0, 3).map((staff) => renderStaffPerformanceCard(staff)).join('');
+  const hiddenStaffCards = (overview.staff_performance || []).slice(3).map((staff) => renderStaffPerformanceCard(staff, true)).join('');
+  const staffToggleButton = (overview.staff_performance || []).length > 3 ? '<button id="toggleStaffPerformanceButton" class="secondary" type="button" style="margin-top: 8px;">Show More</button>' : '';
   $('adminOverview').innerHTML = `
     <article class="result-card">
       <h3>Bookings Overview</h3>
@@ -612,7 +788,7 @@ const loadAdminOverview = async () => {
     </article>
     <article class="result-card wide">
       <h3>Staff Performance Details</h3>
-      <div class="result-list">${staffCards || '<p>No staff records.</p>'}</div>
+      <div class="result-list">${visibleStaffCards || '<p>No staff records.</p>'}${staffToggleButton}${hiddenStaffCards}</div>
     </article>
     <article class="result-card wide">
       <h3>Recent Booking Log</h3>
@@ -623,6 +799,8 @@ const loadAdminOverview = async () => {
           .join('') || '<p>No recent bookings.</p>'}
       </div>
     </article>`;
+
+  setupStaffPerformanceToggle();
 };
 
 const processWorkerPayment = (workerId, amount) => {
@@ -724,6 +902,11 @@ const wireEvents = () => {
 
   $('loadAdminButton').addEventListener('click', () => loadAdminOverview().catch((error) => showMessage(error.message, true)));
   $('refreshNotificationsButton').addEventListener('click', () => loadNotifications().catch((error) => showMessage(error.message, true)));
+  $('downloadFullAnalyticsButton').addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    downloadFullAnalyticsReportPdf().catch((error) => showMessage(error.message, true));
+  });
   $('clearNotificationsButton').addEventListener('click', async () => {
     await api('/api/notifications/clear', { method: 'POST', body: { user_id: state.user.user_id } }).catch(() => {});
     await clearNotifications(state.user.user_id);
@@ -746,8 +929,6 @@ const wireEvents = () => {
     const payWorkerId = event.target.dataset.payWorker;
     const approveId = event.target.dataset.approveLeave;
     const rejectId = event.target.dataset.rejectLeave;
-    const downloadChart = event.target.dataset.downloadChart;
-    const downloadFormat = event.target.dataset.downloadFormat;
     if (readId) readNotification(readId).catch((error) => showMessage(error.message, true));
     if (payWorkerId) {
       const name = event.target.dataset.workerName;
@@ -756,8 +937,6 @@ const wireEvents = () => {
     }
     if (approveId) approveLeave(approveId).catch((error) => showMessage(error.message, true));
     if (rejectId) rejectLeave(rejectId).catch((error) => showMessage(error.message, true));
-    if (downloadChart && downloadFormat === 'pdf') downloadChartPdf(downloadChart);
-    if (downloadChart && downloadFormat === 'excel') exportChartExcel(downloadChart).catch((error) => showMessage(error.message, true));
   });
 
   $('registerWorkerTab').addEventListener('click', () => {

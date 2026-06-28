@@ -53,6 +53,7 @@
               <div class="panel-header">
                 <h2>Analytics</h2>
                 <div class="panel-header-actions">
+                  <button id="downloadFullAnalyticsButton" class="secondary" type="button">Download Full Analytics Report (PDF)</button>
                   <button id="backToOverviewButton" class="secondary">← Back to Overview</button>
                   <button id="collapseAnalyticsButton" class="icon-button" title="Close analytics">×</button>
                 </div>
@@ -63,29 +64,17 @@
                   <div class="canvas-wrapper">
                     <canvas id="bookingsChart" width="320" height="220"></canvas>
                   </div>
-                  <div class="download-actions">
-                    <button data-download-chart="bookings" data-download-format="pdf">Download PDF</button>
-                    <button data-download-chart="bookings" data-download-format="excel">Download Excel</button>
-                  </div>
                 </div>
                 <div class="chart-card">
                   <h3>Users by Role</h3>
                   <div class="canvas-wrapper">
                     <canvas id="usersChart" width="320" height="220"></canvas>
                   </div>
-                  <div class="download-actions">
-                    <button data-download-chart="users" data-download-format="pdf">Download PDF</button>
-                    <button data-download-chart="users" data-download-format="excel">Download Excel</button>
-                  </div>
                 </div>
                 <div class="chart-card wide">
                   <h3>Staff Performance & Earnings (INR)</h3>
                   <div class="canvas-wrapper">
                     <canvas id="performanceChart" width="660" height="240"></canvas>
-                  </div>
-                  <div class="download-actions">
-                    <button data-download-chart="performance" data-download-format="pdf">Download PDF</button>
-                    <button data-download-chart="performance" data-download-format="excel">Download Excel</button>
                   </div>
                 </div>
               </div>
@@ -176,6 +165,9 @@
       </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.1/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script type="module" src="/pages/admin/dashboard.js"></script>
   </body>
 </html>
