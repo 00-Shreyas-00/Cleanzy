@@ -1,4 +1,7 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +39,10 @@ async function main() {
 
   console.log('Services created:', [standardCleaning.service_name, deepCleaning.service_name]);
 
+  const defaultPasswordHash = await bcrypt.hash('SecurePass123!', 10);
+  const adminPasswordHash = await bcrypt.hash('AdminPass123!', 10);
+  const workerPasswordHash = await bcrypt.hash('WorkerPass123!', 10);
+
   // 2. Create administrator user
   const adminUser = await prisma.user.create({
     data: {
@@ -43,19 +50,30 @@ async function main() {
       email: 'admin@cleanzy.com',
       phone: '1234567890',
       role: 'Administrator',
-      password_hash: 'hashedpassword123',
+      password_hash: adminPasswordHash,
       address: '123 Head Office St',
     },
   });
 
-  // 3. Create customer user
+  // 3. Create customer users (including default UI prefill user)
+  const defaultClient = await prisma.user.create({
+    data: {
+      name: 'Client User',
+      email: 'client@example.com',
+      phone: '9876543210',
+      role: 'User',
+      password_hash: defaultPasswordHash,
+      address: '100 Downtown Avenue',
+    },
+  });
+
   const customerUser = await prisma.user.create({
     data: {
       name: 'John Doe',
       email: 'john@gmail.com',
-      phone: '9876543210',
+      phone: '9876543211',
       role: 'User',
-      password_hash: 'hashedpassword456',
+      password_hash: defaultPasswordHash,
       address: '456 Client Lane',
     },
   });
@@ -67,7 +85,7 @@ async function main() {
       email: 'jane@cleanzy.com',
       phone: '5551234567',
       role: 'Worker',
-      password_hash: 'hashedpassword789',
+      password_hash: workerPasswordHash,
       address: '789 Worker Blvd',
     },
   });
