@@ -21,14 +21,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: backend
+      target: development
+    container_name: cleanzy-backend
     restart: always
     ports:
-      - "3000:3000"
+      - "${PORT:-4200}:4200"
     environment:
       DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/cleanzy?schema=public"
-      PORT: 3000
-      JWT_SECRET: "super-secret-key-change-in-production"
+      PORT: 4200
+      JWT_SECRET: "${JWT_SECRET:-super-secret-key-change-in-production}"
     volumes:
       - .:/app
       - /app/node_modules

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { getCookieValue } from '../utils/cookie';
+import { UserRole } from '../constants/enums';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -64,17 +66,7 @@ export const requireRoles = (roles: string[]) => {
 
 export const pageGuard = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const cookieHeader = req.headers.cookie;
-    let token: string | null = null;
-    if (cookieHeader) {
-      const cookies = Object.fromEntries(
-        cookieHeader.split(';').map((c) => {
-          const parts = c.trim().split('=');
-          return [parts[0], parts.slice(1).join('=')];
-        })
-      );
-      token = cookies['cleanzy_token'] || null;
-    }
+    const token = getCookieValue(req, 'cleanzy_token');
 
     if (!token) {
       return res.redirect('/');
@@ -89,11 +81,11 @@ export const pageGuard = (allowedRoles: string[]) => {
       };
 
       if (!allowedRoles.includes(decoded.role)) {
-        if (decoded.role === 'User') {
+        if (decoded.role === UserRole.USER) {
           return res.redirect('/customer/dashboard');
-        } else if (decoded.role === 'Worker') {
+        } else if (decoded.role === UserRole.WORKER) {
           return res.redirect('/worker/dashboard');
-        } else if (decoded.role === 'Administrator') {
+        } else if (decoded.role === UserRole.ADMINISTRATOR) {
           return res.redirect('/admin/dashboard');
         } else {
           return res.redirect('/');
@@ -106,4 +98,3 @@ export const pageGuard = (allowedRoles: string[]) => {
     }
   };
 };
-
