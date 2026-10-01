@@ -10,3 +10,6 @@ dist/
 
 # Environment variables
 .env
+
+# Local database data
+.local_pgdata/
