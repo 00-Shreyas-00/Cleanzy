@@ -10,6 +10,7 @@
     "db:local:stop": "ts-node scripts/local-db.ts stop",
     "db:local:status": "ts-node scripts/local-db.ts status",
     "dev": "nodemon --watch \"src/**/*\" -e ts,json --exec ts-node src/index.ts",
+    "build": "tsc",
     "start": "ts-node src/index.ts",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",

@@ -1,16 +1,15 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../config/prisma';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { NotFoundError, UnauthorizedError } from '../errors/AppError';
+import { UserRole } from '../constants/enums';
 
 export const getProfile = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.user?.user_id;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Access credentials missing',
-      });
+      throw new UnauthorizedError('Unauthorized: Access credentials missing');
     }
 
     const user = await prisma.user.findUnique({
@@ -27,10 +26,7 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response, next:
     });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User profile not found',
-      });
+      throw new NotFoundError('User profile not found');
     }
 
     res.status(200).json({
@@ -47,10 +43,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response, ne
     const userId = req.user?.user_id;
 
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized: Access credentials missing',
-      });
+      throw new UnauthorizedError('Unauthorized: Access credentials missing');
     }
 
     const { name, phone, address, skill_type, availability, location_coords } = req.body;
@@ -60,10 +53,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response, ne
     });
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User profile not found',
-      });
+      throw new NotFoundError('User profile not found');
     }
 
     // Atomic transaction to update both User and Staff (if Worker) profiles
@@ -86,7 +76,7 @@ export const updateProfile = async (req: AuthenticatedRequest, res: Response, ne
       });
 
       let updatedStaff = null;
-      if (user.role === 'Worker') {
+      if (user.role === UserRole.WORKER) {
         updatedStaff = await tx.staff.update({
           where: { user_id: userId },
           data: {
